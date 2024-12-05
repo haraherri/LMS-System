@@ -66,11 +66,14 @@ const Login = () => {
 
   useEffect(() => {
     if (registerIsSuccess && registerData) {
-      toast.success(registerData.messsage || "Signup successfully!");
+      toast.success(registerData.message || "Signup successfully!");
     }
     if (registerError) {
       toast.error(registerError.data.error || "Signup failed!");
     }
+  }, [registerData, registerError, registerIsSuccess]);
+
+  useEffect(() => {
     if (loginIsSuccess && loginData) {
       toast.success(loginData.message || "Login successfully!");
       navigate("/");
@@ -78,18 +81,11 @@ const Login = () => {
     if (loginError) {
       toast.error(loginError.data.error || "Login failed!");
     }
-  }, [
-    registerData,
-    loginData,
-    registerIsLoading,
-    loginIsloading,
-    registerError,
-    loginError,
-  ]);
+  }, [loginData, loginError, loginIsSuccess]);
 
   return (
     <div className="flex items-center w-full justify-center mt-20">
-      <Tabs defaultValue="account" className="w-[400px]">
+      <Tabs defaultValue="login" className="w-[400px]">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="signup">Signup</TabsTrigger>
           <TabsTrigger value="login">Login</TabsTrigger>
