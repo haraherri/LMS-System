@@ -1,96 +1,142 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useGetCreatorCourseQuery } from "@/features/api/courseApi";
+import { Edit, Loader2, Plus } from "lucide-react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
-const invoices = [
-  {
-    invoice: "INV001",
-    paymentStatus: "Paid",
-    totalAmount: "$250.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV002",
-    paymentStatus: "Pending",
-    totalAmount: "$150.00",
-    paymentMethod: "PayPal",
-  },
-  {
-    invoice: "INV003",
-    paymentStatus: "Unpaid",
-    totalAmount: "$350.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV004",
-    paymentStatus: "Paid",
-    totalAmount: "$450.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV005",
-    paymentStatus: "Paid",
-    totalAmount: "$550.00",
-    paymentMethod: "PayPal",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-];
-
 const CourseTable = () => {
+  const { data, error, isLoading } = useGetCreatorCourseQuery();
   const navigate = useNavigate();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[500px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[500px] gap-4">
+        <p className="text-destructive text-lg font-medium">
+          Failed to load courses
+        </p>
+        <Button
+          onClick={() => window.location.reload()}
+          variant="outline"
+          className="gap-2"
+        >
+          <Loader2 className="h-4 w-4" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <Button onClick={() => navigate(`create`)}>Create a new course</Button>
-      <Table>
-        <TableCaption>A list of your recent invoices.</TableCaption>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[100px]">Invoice</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Method</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {invoices.map((invoice) => (
-            <TableRow key={invoice.invoice}>
-              <TableCell className="font-medium">{invoice.invoice}</TableCell>
-              <TableCell>{invoice.paymentStatus}</TableCell>
-              <TableCell>{invoice.paymentMethod}</TableCell>
-              <TableCell className="text-right">
-                {invoice.totalAmount}
-              </TableCell>
+    <div className="max-w-[1200px] mx-auto p-6">
+      {/* Header Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold tracking-tight">
+              Course Management
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              You have {data.courses.length} course
+              {data.courses.length !== 1 && "s"} in total
+            </p>
+          </div>
+          <Button onClick={() => navigate(`create`)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Course
+          </Button>
+        </div>
+      </div>
+
+      {/* Table Section */}
+      <div className="border shadow-sm bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-border hover:bg-transparent">
+              <TableHead className="w-[40%] py-3">Course Name</TableHead>
+              <TableHead className="w-[20%] py-3">Category</TableHead>
+              <TableHead className="w-[10%] py-3">Status</TableHead>
+              <TableHead className="w-[15%] text-right py-3">Price</TableHead>
+              <TableHead className="w-[15%] text-center py-3">Action</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-        <TableFooter>
-          <TableRow>
-            <TableCell colSpan={3}>Total</TableCell>
-            <TableCell className="text-right">$2,500.00</TableCell>
-          </TableRow>
-        </TableFooter>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {data.courses.map((course) => (
+              <TableRow key={course._id} className="hover:bg-muted/50">
+                <TableCell className="py-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium line-clamp-1">
+                      {course.courseTitle}
+                    </span>
+                    {course.subTitle && (
+                      <span className="text-xs text-muted-foreground line-clamp-1">
+                        {course.subTitle}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="py-3">
+                  <Badge variant="outline" className="text-xs px-2 py-0.5">
+                    {course.category}
+                  </Badge>
+                </TableCell>
+                <TableCell className="py-3">
+                  <Badge
+                    variant={course.isPublished ? "success" : "secondary"}
+                    className={`text-xs px-2 py-0.5 ${
+                      course.isPublished
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
+                        : "bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                    }`}
+                  >
+                    {course.isPublished ? "Published" : "Draft"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right py-3">
+                  {course?.coursePrice ? (
+                    <span className="font-medium">
+                      ${course.coursePrice.toFixed(2)}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Not set
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="py-3">
+                  <div className="flex justify-center">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => navigate(`edit/${course._id}`)}
+                      className="h-8 w-8 p-0 hover:bg-muted rounded-full"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span className="sr-only">Edit course</span>
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };
