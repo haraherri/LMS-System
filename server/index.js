@@ -5,6 +5,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import { errorHandler } from "./middlewares/error.js";
 import userRoute from "./routes/user.route.js";
+import courseRoute from "./routes/course.route.js";
 
 dotenv.config();
 const app = express();
@@ -21,6 +22,7 @@ app.use(
   })
 );
 app.use("/api/v1/users", userRoute);
+app.use("/api/v1/courses", courseRoute);
 
 (async () => {
   try {
