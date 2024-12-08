@@ -124,7 +124,7 @@ const CourseTable = () => {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => navigate(`edit/${course._id}`)}
+                      onClick={() => navigate(`${course._id}`)}
                       className="h-8 w-8 p-0 hover:bg-muted rounded-full"
                     >
                       <Edit className="h-4 w-4" />

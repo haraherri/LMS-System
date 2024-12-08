@@ -79,12 +79,15 @@ const Profile = () => {
       <h1 className="font-bold text-2xl text-center md:text-left">PROFILE</h1>
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8 my-5">
         <div className="flex flex-col items-center">
-          <Avatar className="h-24 w-24 md:h-32 md:w-32 mb-4">
+          <Avatar className="h-24 w-24 md:h-32 md:w-32 mb-4 relative aspect-square">
             <AvatarImage
               src={user?.photoUrl || "https://github.com/shadcn.png"}
-              alt="@shadcn"
+              alt={user?.name || "Profile photo"}
+              className="object-cover w-full h-full"
             />
-            <AvatarFallback>CN</AvatarFallback>
+            <AvatarFallback>
+              {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+            </AvatarFallback>
           </Avatar>
         </div>
         <div>

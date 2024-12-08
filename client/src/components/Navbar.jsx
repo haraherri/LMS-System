@@ -58,12 +58,15 @@ const Navbar = () => {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Avatar>
+                <Avatar className="h-10 w-10 relative aspect-square cursor-pointer">
                   <AvatarImage
                     src={user?.photoUrl || "https://github.com/shadcn.png"}
-                    alt="@shadcn"
+                    alt={user?.name || "@user"}
+                    className="object-cover w-full h-full"
                   />
-                  <AvatarFallback>CN</AvatarFallback>
+                  <AvatarFallback>
+                    {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+                  </AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56">
