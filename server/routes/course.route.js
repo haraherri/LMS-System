@@ -5,6 +5,9 @@ import {
   editCourse,
   getCourseById,
   getCreatorCourses,
+  getPublishCourse,
+  removeCourse,
+  toggleCoursePublish,
 } from "../controllers/course.controller.js";
 import upload from "../utils/multer.js";
 import {
@@ -17,6 +20,7 @@ import {
 const router = express.Router();
 
 router.route("/").post(verifyToken, createCourse); //create a new course
+router.route("/published-courses").get(verifyToken, getPublishCourse); //get all published courses
 router.route("/").get(verifyToken, getCreatorCourses); //get all courses created by the user
 router
   .route("/:courseId")
@@ -27,4 +31,6 @@ router.route("/:courseId/lecture").get(verifyToken, getCourseLectures); // get a
 router.route("/:courseId/lecture/:lectureId").patch(verifyToken, editLecture); //edit a lecture
 router.route("/lecture/:lectureId").delete(verifyToken, removeLecture); //delete a lecture
 router.route("/lecture/:lectureId").get(verifyToken, getLectureById); //get a lecture by id
+router.route("/:courseId").patch(verifyToken, toggleCoursePublish); //toggle course publish status
+router.route("/:courseId").delete(verifyToken, removeCourse); //delete a course
 export default router;

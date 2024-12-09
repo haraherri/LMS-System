@@ -69,22 +69,33 @@ const AddCourse = () => {
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>Category</SelectLabel>
-                <SelectItem value="Next JS">Next JS</SelectItem>
+                <SelectItem value="Web Development">Web Development</SelectItem>
+                <SelectItem value="Mobile Development">
+                  Mobile Development
+                </SelectItem>
                 <SelectItem value="Data Science">Data Science</SelectItem>
-                <SelectItem value="Frontend Development">
-                  Frontend Development
+                <SelectItem value="Machine Learning">
+                  Machine Learning
                 </SelectItem>
-                <SelectItem value="Fullstack Development">
-                  Fullstack Development
+                <SelectItem value="Artificial Intelligence">
+                  Artificial Intelligence
                 </SelectItem>
-                <SelectItem value="MERN Stack Development">
-                  MERN Stack Development
+                <SelectItem value="Cybersecurity">Cybersecurity</SelectItem>
+                <SelectItem value="Cloud Computing">Cloud Computing</SelectItem>
+                <SelectItem value="DevOps">DevOps</SelectItem>
+                <SelectItem value="Game Development">
+                  Game Development
                 </SelectItem>
-                <SelectItem value="Javascript">Javascript</SelectItem>
-                <SelectItem value="Python">Python</SelectItem>
-                <SelectItem value="Docker">Docker</SelectItem>
-                <SelectItem value="MongoDB">MongoDB</SelectItem>
-                <SelectItem value="HTML">HTML</SelectItem>
+                <SelectItem value="UI/UX Design">UI/UX Design</SelectItem>
+                <SelectItem value="Digital Marketing">
+                  Digital Marketing
+                </SelectItem>
+                <SelectItem value="Business Analytics">
+                  Business Analytics
+                </SelectItem>
+                <SelectItem value="Project Management">
+                  Project Management
+                </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>

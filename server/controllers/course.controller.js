@@ -1,6 +1,11 @@
 import { CustomError } from "../middlewares/error.js";
 import { Course } from "../models/course.model.js";
-import { deleteMediaFromCloudinary, uploadMedia } from "../utils/cloudinary.js";
+import { Lecture } from "../models/lecture.model.js";
+import {
+  deleteMediaFromCloudinary,
+  deleteVideoFromCloudinary,
+  uploadMedia,
+} from "../utils/cloudinary.js";
 
 export const createCourse = async (req, res, next) => {
   try {
@@ -99,6 +104,83 @@ export const getCourseById = async (req, res, next) => {
       throw new CustomError("Course not found", 404);
     }
     return res.status(200).json({ course });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const toggleCoursePublish = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+    const { publish } = req.query;
+
+    const course = await Course.findByIdAndUpdate(
+      courseId,
+      { isPublished: publish },
+      { new: true }
+    );
+
+    if (!course) {
+      throw new CustomError("Course not found", 404);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Course ${
+        course.isPublished ? "published" : "unpublished"
+      } successfully!`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPublishCourse = async (req, res, next) => {
+  try {
+    const courses = await Course.find({ isPublished: true }).populate({
+      path: "creator",
+      select: "name photoUrl",
+    });
+    if (!courses) {
+      throw new CustomError("No courses found", 404);
+    }
+    return res.status(200).json({ courses });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeCourse = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      throw new CustomError("Course not found", 404);
+    }
+
+    // Delete course thumbnail if exists
+    if (course.courseThumbnail) {
+      const publicId = course.courseThumbnail.split("/").pop().split(".")[0];
+      await deleteMediaFromCloudinary(publicId);
+    }
+
+    // Delete all lectures and their videos
+    for (const lectureId of course.lectures) {
+      const lecture = await Lecture.findById(lectureId);
+      if (lecture && lecture.publicId) {
+        await deleteVideoFromCloudinary(lecture.publicId);
+      }
+      await Lecture.findByIdAndDelete(lectureId);
+    }
+
+    // Delete course
+    await Course.findByIdAndDelete(courseId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Course deleted successfully! 🎉",
+    });
   } catch (error) {
     next(error);
   }

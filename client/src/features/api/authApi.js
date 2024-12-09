@@ -1,6 +1,7 @@
 const USER_API = "http://localhost:8084/api/v1/users/";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { userLoggedIn, userLoggedOut } from "../authSlice";
+import { courseApi } from "./courseApi";
 
 export const authApi = createApi({
   reducerPath: "authApi",
@@ -62,6 +63,15 @@ export const authApi = createApi({
         body: formData,
         credentials: "include",
       }),
+      async onQueryStarted(_, { queryFulfilled, dispatch }) {
+        try {
+          const { data: updatedUser } = await queryFulfilled;
+          dispatch(userLoggedIn({ user: updatedUser.user }));
+          dispatch(courseApi.util.invalidateTags(["Published_Courses"]));
+        } catch (error) {
+          console.log(error);
+        }
+      },
     }),
   }),
 });

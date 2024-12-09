@@ -1,4 +1,15 @@
 import RichTextEditor from "@/components/RichTextEditor";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,6 +32,8 @@ import {
 import {
   useEditCourseMutation,
   useGetCourseByIdQuery,
+  usePublishCourseMutation,
+  useRemoveCourseMutation,
 } from "@/features/api/courseApi";
 import { Image, Loader2, Trash2, XCircle } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
@@ -48,6 +61,11 @@ const CourseTab = () => {
     isLoading: courseByIdLoading,
     refetch,
   } = useGetCourseByIdQuery(courseId);
+
+  const [publishCourse, {}] = usePublishCourseMutation();
+
+  const [removeCourse, { isLoading: removeLoading }] =
+    useRemoveCourseMutation();
 
   useEffect(() => {
     if (courseByIdData?.course) {
@@ -77,6 +95,10 @@ const CourseTab = () => {
       }
     }
   }, [courseByIdData]);
+
+  useEffect(() => {
+    refetch();
+  }, []);
 
   const [previewThumbnail, setPreviewThumbnail] = useState("");
   const navigate = useNavigate();
@@ -120,6 +142,30 @@ const CourseTab = () => {
     await editCourse({ courseId, formData });
   };
 
+  const publishStatusHandler = async (action) => {
+    try {
+      const response = await publishCourse({ courseId, query: action });
+      if (response.data.success) {
+        refetch();
+        toast.success(response.data.message);
+      }
+    } catch (error) {
+      toast.error(error?.data?.error || "An error occurred!");
+    }
+  };
+
+  const removeCourseHandler = async () => {
+    try {
+      const response = await removeCourse(courseId);
+      if (response.data.success) {
+        toast.success(response.data.message);
+        navigate("/admin/course");
+      }
+    } catch (error) {
+      toast.error(error?.data?.error || "Failed to delete course");
+    }
+  };
+
   useEffect(() => {
     if (isSuccess) {
       toast.success(data.message || "Yay!! Course updated successfully!");
@@ -131,8 +177,6 @@ const CourseTab = () => {
   }, [isSuccess, error]);
 
   if (courseByIdLoading) return <h1>Loading...</h1>;
-
-  const isPublished = false;
 
   return (
     <Card className="shadow-md">
@@ -150,13 +194,54 @@ const CourseTab = () => {
           </CardDescription>
         </div>
         <div className="space-x-2">
-          <Button variant="outline" className="px-4 py-2">
-            {isPublished ? "Unpublish" : "Publish"}
+          <Button
+            variant="outline"
+            className="px-4 py-2"
+            disabled={courseByIdData?.course.lectures.length === 0}
+            onClick={() =>
+              publishStatusHandler(
+                courseByIdData?.course.isPublished ? "false" : "true"
+              )
+            }
+          >
+            {courseByIdData?.course.isPublished ? "Unpublished" : "Publish"}
           </Button>
-          <Button variant="destructive" className="px-4 py-2">
-            {" "}
-            Remove Course
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                className="px-4 py-2"
+                disabled={removeLoading}
+              >
+                {removeLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please
+                    wait...
+                  </>
+                ) : (
+                  "Remove Course"
+                )}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the
+                  course and all its lectures.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={removeCourseHandler}
+                  className="bg-red-500 hover:bg-red-600"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardHeader>
       <CardContent className="p-6">
