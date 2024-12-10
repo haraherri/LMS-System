@@ -1,7 +1,7 @@
 import { CustomError } from "../middlewares/error.js";
 import { Course } from "../models/course.model.js";
 import { Lecture } from "../models/lecture.model.js";
-import { deleteVideoFromCloudinary } from "../utils/cloudinary.js";
+import { deleteVideoFromMinio, uploadVideoToMinio } from "../utils/minio.js";
 
 export const createLecture = async (req, res, next) => {
   try {
@@ -58,26 +58,25 @@ export const editLecture = async (req, res, next) => {
       throw new CustomError("Lecture not found", 404);
     }
 
-    // 3. Delete old video ONLY if new video is being uploaded
-    if (
-      videoInfo?.videoUrl &&
-      videoInfo.videoUrl !== existingLecture.videoUrl
-    ) {
-      if (existingLecture.publicId) {
-        await deleteVideoFromCloudinary(existingLecture.publicId);
-      }
+    // 3. Get video URL from request body
+    const newVideoUrl = videoInfo?.videoUrl;
+
+    // 4. Delete old video from MinIO ONLY if new video URL is provided
+    if (existingLecture.videoUrl && newVideoUrl) {
+      // Extract filename from existingLecture.videoUrl
+      const oldVideoFilename = existingLecture.videoUrl
+        .split("/")
+        .pop()
+        .split("?")[0]; // Consider only the part before '?'
+      await deleteVideoFromMinio(oldVideoFilename);
     }
 
-    // 4. Update lecture with single query
+    // 5. Update lecture with single query
     const updatedLecture = await Lecture.findByIdAndUpdate(
       lectureId,
       {
         ...(lectureTitle && { lectureTitle }),
-        ...(videoInfo?.videoUrl &&
-          videoInfo.videoUrl !== existingLecture.videoUrl && {
-            videoUrl: videoInfo.videoUrl,
-            publicId: videoInfo.publicId,
-          }),
+        ...(newVideoUrl && { videoUrl: newVideoUrl }),
         ...(typeof isPreviewFree !== "undefined" && { isPreviewFree }),
       },
       { new: true, runValidators: true }
@@ -105,9 +104,11 @@ export const removeLecture = async (req, res, next) => {
 
     // 2. Run cleanup operations in parallel
     await Promise.all([
-      // Delete media if exists
-      deletedLecture.publicId &&
-        deleteVideoFromCloudinary(deletedLecture.publicId),
+      // Delete video from MinIO if exists
+      deletedLecture.videoUrl &&
+        deleteVideoFromMinio(
+          deletedLecture.videoUrl.split("/").pop().split("?")[0]
+        ),
       // Remove lecture reference from course
       Course.updateOne(
         { lectures: lectureId },

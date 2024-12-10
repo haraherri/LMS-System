@@ -1,11 +1,9 @@
 import { CustomError } from "../middlewares/error.js";
 import { Course } from "../models/course.model.js";
 import { Lecture } from "../models/lecture.model.js";
-import {
-  deleteMediaFromCloudinary,
-  deleteVideoFromCloudinary,
-  uploadMedia,
-} from "../utils/cloudinary.js";
+import { deleteVideoFromMinio } from "../utils/minio.js";
+import { deleteMediaFromCloudinary, uploadMedia } from "../utils/cloudinary.js"; // Import Cloudinary functions
+import fs from "fs";
 
 export const createCourse = async (req, res, next) => {
   try {
@@ -72,12 +70,22 @@ export const editCourse = async (req, res, next) => {
 
     // Handle thumbnail update if provided
     if (thumbnail) {
+      // **Changes for Cloudinary:**
+      // 1. Delete old thumbnail from Cloudinary (if exists)
       if (course.courseThumbnail) {
         const publicId = course.courseThumbnail.split("/").pop().split(".")[0];
         await deleteMediaFromCloudinary(publicId);
       }
+
+      // 2. Upload new thumbnail to Cloudinary
       const { secure_url } = await uploadMedia(thumbnail.path);
       updateData.courseThumbnail = secure_url;
+      // delete temporary file after uploading
+      fs.unlink(thumbnail.path, (err) => {
+        if (err) {
+          console.error("Error deleting temporary file:", err);
+        }
+      });
     }
 
     const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
@@ -91,6 +99,14 @@ export const editCourse = async (req, res, next) => {
       message: "Course updated successfully!",
     });
   } catch (error) {
+    // delete temporary file if an error occurs
+    if (req.file) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) {
+          console.error("Error deleting temporary file:", err);
+        }
+      });
+    }
     next(error);
   }
 };
@@ -159,17 +175,18 @@ export const removeCourse = async (req, res, next) => {
       throw new CustomError("Course not found", 404);
     }
 
-    // Delete course thumbnail if exists
+    // Delete course thumbnail if exists (using Cloudinary)
     if (course.courseThumbnail) {
       const publicId = course.courseThumbnail.split("/").pop().split(".")[0];
       await deleteMediaFromCloudinary(publicId);
     }
 
-    // Delete all lectures and their videos
+    // Delete all lectures and their videos (using MinIO)
     for (const lectureId of course.lectures) {
       const lecture = await Lecture.findById(lectureId);
-      if (lecture && lecture.publicId) {
-        await deleteVideoFromCloudinary(lecture.publicId);
+      if (lecture && lecture.videoUrl) {
+        const videoFilename = lecture.videoUrl.split("/").pop().split("?")[0];
+        await deleteVideoFromMinio(videoFilename);
       }
       await Lecture.findByIdAndDelete(lectureId);
     }

@@ -79,18 +79,26 @@ const LectureTab = () => {
   const currentProgress = useRef(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (currentProgress.current > uploadProgress) {
-        setUploadProgress((prev) =>
-          prev + 1 > currentProgress.current
-            ? currentProgress.current
-            : prev + 1
-        );
-      }
-    }, 50);
+    let interval; // Declare interval outside the if block
+    if (isUploading) {
+      // Only start the interval when isUploading is true
+      interval = setInterval(() => {
+        // Check if upload is complete within the interval
+        if (currentProgress.current >= 100) {
+          clearInterval(interval); // Clear interval if upload is done
+          setUploadProgress(currentProgress.current); // Set to actual progress value
+        } else if (currentProgress.current > uploadProgress) {
+          setUploadProgress((prev) =>
+            prev + 1 > currentProgress.current
+              ? currentProgress.current
+              : prev + 1
+          );
+        }
+      }, 50);
+    }
 
     return () => clearInterval(interval);
-  }, [uploadProgress]);
+  }, [uploadProgress, isUploading, currentProgress.current]);
 
   const fileChangeHandler = async (e) => {
     const file = e.target.files[0];
