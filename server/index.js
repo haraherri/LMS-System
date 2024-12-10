@@ -7,11 +7,14 @@ import { errorHandler } from "./middlewares/error.js";
 import userRoute from "./routes/user.route.js";
 import courseRoute from "./routes/course.route.js";
 import mediaRoute from "./routes/media.route.js";
+import purchaseRoute from "./routes/purchaseCourse.route.js";
 
 dotenv.config();
 const app = express();
 
 const PORT = process.env.PORT || 5000;
+
+app.use("/api/v1/purchase/webhook", express.raw({ type: "application/json" }));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -25,6 +28,7 @@ app.use(
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/courses", courseRoute);
 app.use("/api/v1/media", mediaRoute);
+app.use("/api/v1/purchase", purchaseRoute);
 
 (async () => {
   try {

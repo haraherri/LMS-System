@@ -2,6 +2,7 @@ const USER_API = "http://localhost:8084/api/v1/users/";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { userLoggedIn, userLoggedOut } from "../authSlice";
 import { courseApi } from "./courseApi";
+import { purchaseApi } from "./purchaseApi";
 
 export const authApi = createApi({
   reducerPath: "authApi",
@@ -15,15 +16,23 @@ export const authApi = createApi({
       }),
     }),
     loginUser: builder.mutation({
-      query: (inputData) => ({
+      query: (data) => ({
         url: "login",
         method: "POST",
-        body: inputData,
+        body: data,
       }),
       async onQueryStarted(_, { queryFulfilled, dispatch }) {
         try {
+          // Reset all API states first to clear old user's cache
+          dispatch(courseApi.util.resetApiState());
+          dispatch(purchaseApi.util.resetApiState());
+
           const result = await queryFulfilled;
           dispatch(userLoggedIn({ user: result.data.user }));
+
+          // Then initialize new states for new user
+          await dispatch(courseApi.util.initiate());
+          await dispatch(purchaseApi.util.initiate());
         } catch (error) {
           console.log(error);
         }
@@ -36,7 +45,14 @@ export const authApi = createApi({
       }),
       async onQueryStarted(_, { queryFulfilled, dispatch }) {
         try {
+          await queryFulfilled;
+
+          // Reset auth state first
           dispatch(userLoggedOut());
+
+          // Then reset all API states
+          dispatch(courseApi.util.resetApiState());
+          dispatch(purchaseApi.util.resetApiState());
         } catch (error) {
           console.log(error);
         }

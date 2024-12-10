@@ -7,10 +7,11 @@ import { appStore } from "./app/store";
 import { Toaster } from "sonner";
 import { useLoadUserQuery } from "./features/api/authApi";
 import LoadingSpinner from "./components/LoadingSpinner";
+import { Loader2 } from "lucide-react";
 
 const Custom = ({ children }) => {
   const { isLoading } = useLoadUserQuery();
-  return <>{isLoading ? <LoadingSpinner /> : <>{children}</>}</>;
+  return <>{isLoading ? <Loader2 /> : <>{children}</>}</>;
 };
 
 createRoot(document.getElementById("root")).render(
