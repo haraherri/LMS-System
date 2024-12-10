@@ -152,66 +152,68 @@ const CourseDetail = () => {
 
         {/* Course Preview & Purchase */}
         <div className="lg:col-span-1">
-          <Card className="shadow-lg border border-gray-200">
-            <CardHeader className="bg-gray-100/50 px-6 py-4">
+          <Card className="shadow-lg border border-gray-200 rounded-xl overflow-hidden">
+            <div className="relative w-full aspect-video">
+              <ReactPlayer
+                width="100%"
+                height="100%"
+                url={
+                  purchaseStatus === "Success"
+                    ? course.lectures[0]?.videoUrl
+                    : course.lectures.find((lecture) => lecture.isPreviewFree)
+                        ?.videoUrl
+                }
+                controls={true}
+                className="absolute top-0 left-0"
+              />
+            </div>
+            <CardHeader className="bg-gray-100/50 px-6 pt-6 pb-4">
               <CardTitle className="text-lg font-bold">
                 Course Preview
               </CardTitle>
+              <CardDescription className="text-gray-500 line-clamp-2">
+                {purchaseStatus === "Success"
+                  ? course.lectures[0]?.lectureTitle
+                  : course.lectures.find((lecture) => lecture.isPreviewFree)
+                      ?.lectureTitle}
+              </CardDescription>
             </CardHeader>
-            <CardContent className="p-4">
-              <div className="w-full aspect-video mb-6 rounded-lg overflow-hidden border border-gray-200">
-                <ReactPlayer
-                  width="100%"
-                  height="100%"
-                  url={
-                    purchaseStatus === "Success"
-                      ? course.lectures[0]?.videoUrl
-                      : course.lectures.find((lecture) => lecture.isPreviewFree)
-                          ?.videoUrl
-                  }
-                  controls={true}
-                />
-              </div>
+            <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-xl font-bold line-clamp-2">
-                    {purchaseStatus === "Success"
-                      ? course.lectures[0]?.lectureTitle
-                      : course.lectures.find((lecture) => lecture.isPreviewFree)
-                          ?.lectureTitle}
-                  </h1>
+                  <div className="flex items-center gap-2">
+                    <span className="text-3xl font-semibold">
+                      ${course?.coursePrice ? course.coursePrice : "N/A"}
+                    </span>
+                    {course?.coursePrice && (
+                      <span className="text-sm text-gray-500 line-through">
+                        ${course?.coursePrice * 1.2}
+                      </span> /* Assuming a 20% discount */
+                    )}
+                  </div>
                 </div>
                 <Separator />
-                <div className="flex items-center gap-2">
-                  <span className="text-3xl font-semibold">
-                    ${course?.coursePrice ? course.coursePrice : "N/A"}
-                  </span>
-                  {/* Example for adding a discount, adjust logic as needed */}
-                  {course?.coursePrice && (
-                    <span className="text-sm text-gray-500 line-through">
-                      ${course?.coursePrice * 1.2}
-                    </span> /* Assuming a 20% discount */
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    variant="ghost"
+                    className="hover:bg-gray-200 transition-colors"
+                  >
+                    <Star className="h-4 w-4" />
+                    <span className="sr-only">Add to Wishlist</span>
+                  </Button>
+                  {purchaseStatus === "Success" ? (
+                    <Button
+                      onClick={handleContinueCourse}
+                      size="lg"
+                      className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-all duration-300 flex items-center justify-center"
+                    >
+                      <PlayCircle className="h-5 w-5 mr-2" />
+                      Continue Course
+                    </Button>
+                  ) : (
+                    <BuyCourseButton courseId={courseId} />
                   )}
                 </div>
-                {/* Add to wishlist button */}
-                <Button
-                  variant="ghost"
-                  className="w-full flex items-center justify-center gap-2"
-                >
-                  <Star className="h-4 w-4" />
-                  <span>Add to Wishlist</span>
-                </Button>
-                {purchaseStatus === "Success" ? (
-                  <Button
-                    onClick={handleContinueCourse}
-                    className="w-full"
-                    size="lg"
-                  >
-                    Continue Course
-                  </Button>
-                ) : (
-                  <BuyCourseButton courseId={courseId} />
-                )}
               </div>
             </CardContent>
           </Card>
