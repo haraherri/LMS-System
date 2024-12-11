@@ -11,29 +11,42 @@ export const courseProgressApi = createApi({
   endpoints: (builder) => ({
     getCourseProgress: builder.query({
       query: (courseId) => ({
-        url: `${courseId}`,
+        url: `/${courseId}`,
         method: "GET",
       }),
+      providesTags: (result, error, courseId) => [
+        { type: "Progress", id: courseId },
+      ],
     }),
     updateLectureProgress: builder.mutation({
       query: ({ courseId, lectureId }) => ({
-        url: `${courseId}/lecture/${lectureId}/view`,
+        url: `/${courseId}/lecture/${lectureId}/view`,
         method: "PATCH",
       }),
+      invalidatesTags: (result, error, { courseId }) => [
+        { type: "Progress", id: courseId },
+      ],
     }),
     markAsCompleted: builder.mutation({
       query: (courseId) => ({
-        url: `${courseId}/complete`,
-        method: "POST",
+        url: `/${courseId}/complete`,
+        method: "PATCH", // Changed from POST to PATCH
       }),
+      invalidatesTags: (result, error, courseId) => [
+        { type: "Progress", id: courseId },
+      ],
     }),
     markAsInCompleted: builder.mutation({
       query: (courseId) => ({
-        url: `${courseId}/incomplete`,
-        method: "POST",
+        url: `/${courseId}/incomplete`,
+        method: "PATCH", // Changed from POST to PATCH
       }),
+      invalidatesTags: (result, error, courseId) => [
+        { type: "Progress", id: courseId },
+      ],
     }),
   }),
+  tagTypes: ["Progress"],
 });
 
 export const {

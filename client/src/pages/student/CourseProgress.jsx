@@ -1,42 +1,81 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   useGetCourseProgressQuery,
   useMarkAsCompletedMutation,
   useMarkAsInCompletedMutation,
   useUpdateLectureProgressMutation,
 } from "@/features/api/courseProgressApi";
-import { Check, CheckCircle, CheckCircle2, CirclePlay } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import {
+  CheckCircle,
+  CheckCircle2,
+  CircleEllipsis,
+  CircleUser,
+  PlayCircle,
+} from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
+import ReactPlayer from "react-player";
+import parse from "html-react-parser";
 
 const CourseProgress = () => {
+  const [currentSection, setCurrentSection] = useState(null);
   const [currentLecture, setCurrentLecture] = useState(null);
+  const [showFullDescription, setShowFullDescription] = useState(false);
   const params = useParams();
   const { courseId } = params;
   const { data, isLoading, isError, refetch } =
     useGetCourseProgressQuery(courseId);
 
   const [updateLectureProgress] = useUpdateLectureProgressMutation();
-  const [
-    completeCourse,
-    { data: markCompletedData, isSuccess: markCompletedIsSuccess },
-  ] = useMarkAsCompletedMutation();
-  const [
-    inCompleteCourse,
-    { data: markInCompletedData, isSuccess: markInCompletedIsSuccess },
-  ] = useMarkAsInCompletedMutation();
+  const [completeCourse] = useMarkAsCompletedMutation();
+  const [inCompleteCourse] = useMarkAsInCompletedMutation();
+  const playerRef = useRef(null);
 
-  if (isLoading) return <p>Loading...</p>;
-  if (isError) return <p>Failed to load course details</p>;
+  useEffect(() => {
+    if (data && data.data.courseDetails.sections.length > 0) {
+      if (!currentSection) {
+        setCurrentSection(data.data.courseDetails.sections[0]);
+      }
+      if (!currentLecture) {
+        setCurrentLecture(data.data.courseDetails.sections[0].lectures[0]);
+      }
+    }
+  }, [data, currentSection, currentLecture]);
+
+  if (isLoading)
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <CircleEllipsis className="w-12 h-12 animate-spin text-gray-600" />
+      </div>
+    );
+  if (isError)
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-lg text-red-500">
+          Failed to load course details. Please try again later.
+        </p>
+      </div>
+    );
 
   const { courseDetails, progress, completed } = data.data;
-  const { courseTitle } = courseDetails;
-
-  const initialLecture =
-    currentLecture || (courseDetails.lectures && courseDetails?.lectures[0]);
+  const { courseTitle, subTitle, description, category, creator } =
+    courseDetails;
 
   const isLectureCompleted = (lectureId) => {
     return progress?.some(
@@ -44,14 +83,9 @@ const CourseProgress = () => {
     );
   };
 
-  const currentIndex = currentLecture
-    ? courseDetails.lectures.findIndex(
-        (lecture) => lecture._id === currentLecture._id
-      )
-    : 0;
-
-  const handleLectureClick = (lecture) => {
+  const handleLectureClick = (lecture, section) => {
     setCurrentLecture(lecture);
+    setCurrentSection(section);
   };
 
   const handleUpdateLectureProgress = async (lectureId) => {
@@ -62,7 +96,7 @@ const CourseProgress = () => {
   const handleMarkAsCompleted = async () => {
     try {
       const result = await completeCourse(courseId).unwrap();
-      await refetch(); // Đợi refetch hoàn thành
+      await refetch();
       toast.success(result.message || "Course marked as completed");
     } catch (error) {
       toast.error(error?.data?.error || "Failed to mark as completed");
@@ -78,83 +112,201 @@ const CourseProgress = () => {
       toast.error(error?.data?.error || "Failed to mark as incompleted");
     }
   };
-  return (
-    <div className="max-w-7xl mx-auto p-4 mt-20">
-      <div className="flex justify-between mb-4">
-        <h1 className="text-2xl font-bold">{courseTitle}</h1>
-        <Button
-          onClick={completed ? handleMarkAsInCompleted : handleMarkAsCompleted}
-          variant={completed ? "outline" : "default"}
-        >
-          {completed ? (
-            <div className="flex items-center">
-              <CheckCircle className="h-4 w-4 mr-2" /> <span>Completed</span>
-            </div>
-          ) : (
-            "Mark as Completed"
-          )}
-        </Button>
-      </div>
 
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="flex-1 md:w-3/5 h-fit rounded-lg shadow-lg p-4">
-          <div>
-            <video
-              src={currentLecture?.videoUrl || initialLecture.videoUrl}
-              controls
-              className="w-full h-auto md:rounded-lg"
-              onEnded={() =>
-                handleUpdateLectureProgress(
-                  currentLecture?._id || initialLecture._id
-                )
-              }
-            />
-          </div>
-          <div className="mt-2">
-            <h3 className="font-medium text-lg">
-              {`Lecture ${currentIndex + 1} : ${
-                currentLecture?.lectureTitle || initialLecture.lectureTitle
-              }`}
-            </h3>
+  const handleProgress = ({ playedSeconds }) => {
+    if (playedSeconds >= 3 && !isLectureCompleted(currentLecture._id)) {
+      handleUpdateLectureProgress(currentLecture._id);
+    }
+  };
+
+  const toggleDescription = () => {
+    setShowFullDescription(!showFullDescription);
+  };
+
+  // Sử dụng độ dài ký tự để xác định việc hiển thị nút
+  const descriptionCharacterLimit = 200; // Giới hạn ký tự hiển thị ban đầu
+  const shouldShowMoreButton =
+    description && description.length > descriptionCharacterLimit;
+
+  return (
+    <div className="pt-16 md:pt-24 p-4 md:p-8">
+      {" "}
+      {/* Padding top added */}
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-200">
+            {courseTitle}
+          </h1>
+          <p className="text-lg text-gray-600 dark:text-gray-400">{subTitle}</p>
+          <div className="mt-2 flex items-center gap-2">
+            <Badge>{category}</Badge>
+            <div className="flex items-center gap-2">
+              <CircleUser size={18} />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {creator.username}
+              </span>
+            </div>
           </div>
         </div>
-        <div className="flex flex-col w-full md:w-2/5 border-t md:border-t-0 md:border-l border-gray-200 md:pl-4 pt-4 md:pt-0">
-          <h2 className="font-semibold text-xl mb-4">Course Lecture</h2>
-          <div className="flex-1 overflow-y-auto">
-            {courseDetails?.lectures.map((lecture) => (
-              <Card
-                key={lecture._id}
-                className={`mb-3 hover:cursor-pointer transition transform ${
-                  lecture._id === currentLecture?._id
-                    ? "bg-gray-200"
-                    : "dark:bg-gray-800"
-                } `}
-                onClick={() => handleLectureClick(lecture)}
-              >
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center">
-                    {isLectureCompleted(lecture._id) ? (
-                      <CheckCircle2 size={24} className="text-green-500 mr-2" />
-                    ) : (
-                      <CirclePlay size={24} className="text-gray-500 mr-2" />
-                    )}
-                    <div>
-                      <CardTitle className="text-lg font-medium">
-                        {lecture.lectureTitle}
-                      </CardTitle>
-                    </div>
-                  </div>
-                  {isLectureCompleted(lecture._id) && (
-                    <Badge
-                      variant={"outline"}
-                      className="bg-green-200 text-green-600"
-                    >
-                      Completed
-                    </Badge>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-2">
+            <Card className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+              <div className="h-[250px] md:h-[350px]">
+                <ReactPlayer
+                  ref={playerRef}
+                  url={currentLecture?.videoUrl}
+                  width="100%"
+                  height="100%"
+                  controls
+                  playing={true}
+                  onProgress={handleProgress}
+                  config={{
+                    file: {
+                      attributes: {
+                        controlsList: "nodownload",
+                      },
+                    },
+                  }}
+                />
+              </div>
+              <CardHeader>
+                <CardTitle className="text-xl md:text-2xl">
+                  {`Section ${
+                    courseDetails.sections.findIndex(
+                      (sec) => sec._id === currentSection?._id
+                    ) + 1
+                  } - ${currentSection?.sectionTitle} : Lecture ${
+                    currentSection?.lectures.findIndex(
+                      (lec) => lec._id === currentLecture?._id
+                    ) + 1
+                  } - ${currentLecture?.lectureTitle}`}
+                </CardTitle>
+                <CardDescription>
+                  {/* Hiển thị nội dung dựa vào độ dài ký tự và trạng thái showFullDescription */}
+                  {shouldShowMoreButton ? (
+                    <>
+                      {showFullDescription
+                        ? parse(description)
+                        : parse(
+                            description.substring(
+                              0,
+                              descriptionCharacterLimit
+                            ) + "..."
+                          )}
+                      <Button
+                        variant="link"
+                        className="p-0 text-blue-500"
+                        onClick={toggleDescription}
+                      >
+                        {showFullDescription ? "Show less" : "Show more"}
+                      </Button>
+                    </>
+                  ) : (
+                    parse(description)
                   )}
-                </CardContent>
-              </Card>
-            ))}
+                </CardDescription>
+              </CardHeader>
+              <CardFooter className="flex justify-end">
+                <Button
+                  onClick={
+                    completed ? handleMarkAsInCompleted : handleMarkAsCompleted
+                  }
+                  variant={completed ? "outline" : "default"}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  {completed ? (
+                    <div className="flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-2" />{" "}
+                      <span>Completed</span>
+                    </div>
+                  ) : (
+                    "Mark as Completed"
+                  )}
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+
+          <div className="md:col-span-1">
+            <Card className="bg-white dark:bg-gray-800 shadow-lg rounded-lg">
+              <CardHeader>
+                <CardTitle className="text-xl">Course Content</CardTitle>
+                <CardDescription>
+                  {courseDetails.sections.length} Sections -{" "}
+                  {courseDetails.sections.reduce(
+                    (acc, section) => acc + section.lectures.length,
+                    0
+                  )}{" "}
+                  Lectures
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 divide-y divide-gray-200 dark:divide-gray-700">
+                <Accordion type="single" collapsible className="w-full">
+                  {courseDetails?.sections.map((section, index) => (
+                    <AccordionItem key={section._id} value={section._id}>
+                      <AccordionTrigger
+                        onClick={() => setCurrentSection(section)}
+                        className="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-700 dark:text-gray-300 mr-2">
+                            Section {index + 1}: {section.sectionTitle}
+                          </span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto">
+                            {section.lectures.length} Lectures
+                          </span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 py-3">
+                        {section.lectures.map((lecture) => (
+                          <div
+                            key={lecture._id}
+                            onClick={() => handleLectureClick(lecture, section)}
+                            className={`flex items-center justify-between p-3 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                              lecture._id === currentLecture?._id
+                                ? "bg-gray-100 dark:bg-gray-700"
+                                : ""
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {isLectureCompleted(lecture._id) ? (
+                                <CheckCircle2
+                                  size={18}
+                                  className="text-green-500"
+                                />
+                              ) : (
+                                <PlayCircle
+                                  size={18}
+                                  className="text-gray-500"
+                                />
+                              )}
+                              <span
+                                className={`text-sm ${
+                                  isLectureCompleted(lecture._id)
+                                    ? "text-gray-500 line-through"
+                                    : "text-gray-800 dark:text-gray-300"
+                                }`}
+                              >
+                                {lecture.lectureTitle}
+                              </span>
+                            </div>
+                            {isLectureCompleted(lecture._id) && (
+                              <Badge
+                                variant={"outline"}
+                                className="bg-green-200 text-green-600 text-xs"
+                              >
+                                Completed
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

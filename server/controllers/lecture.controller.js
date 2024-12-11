@@ -1,24 +1,26 @@
 import { CustomError } from "../middlewares/error.js";
 import { Course } from "../models/course.model.js";
 import { Lecture } from "../models/lecture.model.js";
+import { Section } from "../models/section.model.js";
 import { deleteVideoFromMinio, uploadVideoToMinio } from "../utils/minio.js";
 
 export const createLecture = async (req, res, next) => {
   try {
-    const { lectureTitle } = req.body;
-    const { courseId } = req.params;
+    const { lectureTitle, sectionId } = req.body; // Lấy thêm sectionId từ request body
 
-    if (!lectureTitle || !courseId) {
+    if (!lectureTitle || !sectionId) {
       throw new CustomError("Please provide all required fields", 400);
     }
 
     const lecture = await Lecture.create({ lectureTitle });
 
-    const course = await Course.findById(courseId);
-    if (course) {
-      course.lectures.push(lecture._id);
-      await course.save();
+    // Add lecture to section instead of course
+    const section = await Section.findById(sectionId);
+    if (!section) {
+      throw new CustomError("Section not found", 404);
     }
+    section.lectures.push(lecture._id);
+    await section.save();
 
     return res.status(201).json({
       message: "Lecture created successfully! 🎉",
@@ -32,11 +34,25 @@ export const createLecture = async (req, res, next) => {
 export const getCourseLectures = async (req, res, next) => {
   try {
     const { courseId } = req.params;
-    const course = await Course.findById(courseId).populate("lectures");
+
+    // Find the course
+    const course = await Course.findById(courseId);
     if (!course) {
       throw new CustomError("Course not found", 404);
     }
-    return res.status(200).json({ lectures: course.lectures });
+
+    // Get all sections of the course
+    const sections = await Section.find({ course: courseId }).populate(
+      "lectures"
+    );
+
+    // Extract all lectures from the sections
+    const lectures = sections.reduce(
+      (acc, section) => acc.concat(section.lectures),
+      []
+    );
+
+    return res.status(200).json({ lectures });
   } catch (error) {
     next(error);
   }
@@ -94,26 +110,32 @@ export const editLecture = async (req, res, next) => {
 
 export const removeLecture = async (req, res, next) => {
   try {
-    const { lectureId } = req.params;
+    const { lectureId, courseId } = req.params;
 
-    // 1. Find and delete lecture in one query
-    const deletedLecture = await Lecture.findByIdAndDelete(lectureId);
-    if (!deletedLecture) {
+    const lectureToDelete = await Lecture.findById(lectureId);
+    if (!lectureToDelete) {
       throw new CustomError("Lecture not found", 404);
     }
+    const section = await Section.findOne({ lectures: lectureId });
 
-    // 2. Run cleanup operations in parallel
+    if (!section) {
+      throw new CustomError("Section not found or lecture not in section", 404);
+    }
+    const sectionId = section._id;
+
+    section.lectures = section.lectures.filter(
+      (id) => id.toString() !== lectureId
+    );
+    await section.save();
+
+    await Lecture.findByIdAndDelete(lectureId);
+
     await Promise.all([
       // Delete video from MinIO if exists
-      deletedLecture.videoUrl &&
+      lectureToDelete.videoUrl &&
         deleteVideoFromMinio(
-          deletedLecture.videoUrl.split("/").pop().split("?")[0]
+          lectureToDelete.videoUrl.split("/").pop().split("?")[0]
         ),
-      // Remove lecture reference from course
-      Course.updateOne(
-        { lectures: lectureId },
-        { $pull: { lectures: lectureId } }
-      ),
     ]);
 
     return res.status(200).json({

@@ -138,6 +138,8 @@ const LectureTab = () => {
   };
 
   const editLectureHandler = async () => {
+    console.log("lectureId:", lectureId); // Log lectureId before calling mutation
+    console.log("courseId:", courseId);
     await editLecture({
       lectureTitle,
       videoInfo: uploadVideoInfo,
@@ -148,7 +150,7 @@ const LectureTab = () => {
   };
 
   const removeLectureHandler = async () => {
-    await removeLecture({ lectureId });
+    await removeLecture({ courseId, lectureId });
   };
 
   useEffect(() => {

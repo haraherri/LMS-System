@@ -13,7 +13,7 @@ router.route("/:courseId").get(verifyToken, getCourseProgress); //get course pro
 router
   .route("/:courseId/lecture/:lectureId/view")
   .patch(verifyToken, updateLectureProgress); //update lecture progress
-router.route("/:courseId/complete").post(verifyToken, markAsCompleted); //mark course as completed
-router.route("/:courseId/incomplete").post(verifyToken, markAsInCompleted); //reset course progress
+router.route("/:courseId/complete").patch(verifyToken, markAsCompleted); //mark course as completed (changed from POST to PATCH)
+router.route("/:courseId/incomplete").patch(verifyToken, markAsInCompleted); //reset course progress (changed from POST to PATCH)
 
 export default router;

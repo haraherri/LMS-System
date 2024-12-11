@@ -3,6 +3,7 @@ import { Course } from "../models/course.model.js";
 import { CoursePurchase } from "../models/coursePurchase.model.js";
 import { CustomError } from "../middlewares/error.js";
 import { User } from "../models/user.model.js";
+import { Section } from "../models/section.model.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -148,15 +149,25 @@ export const getCourseDetailWithPurchaseStatus = async (req, res, next) => {
       path: "courseId",
       populate: [
         { path: "creator", select: "name email photoUrl" },
-        { path: "lectures" }, // Populate lectures inside courseId
+        {
+          path: "sections",
+          populate: {
+            path: "lectures",
+          },
+        },
       ],
     });
 
     if (!coursePurchase) {
-      // If not purchased, still return the course details
-      const course = await Course.findById(courseId)
-        .populate("creator", "name email photoUrl")
-        .populate("lectures");
+      const course = await Course.findById(courseId).populate([
+        { path: "creator", select: "name email photoUrl" },
+        {
+          path: "sections",
+          populate: {
+            path: "lectures",
+          },
+        },
+      ]);
 
       if (!course) {
         throw new CustomError("Course not found", 404);
@@ -165,14 +176,14 @@ export const getCourseDetailWithPurchaseStatus = async (req, res, next) => {
       return res.status(200).json({
         success: true,
         course,
-        purchaseStatus: null, // Indicate that the course has not been purchased
+        purchaseStatus: null,
       });
     }
 
     return res.status(200).json({
       success: true,
-      course: coursePurchase.courseId, // Access populated course details
-      purchaseStatus: coursePurchase.status, // Return the actual purchase status
+      course: coursePurchase.courseId,
+      purchaseStatus: coursePurchase.status,
     });
   } catch (error) {
     next(error);
@@ -184,22 +195,24 @@ export const getAllPurchasedCourse = async (req, res, next) => {
     const userId = req.id;
 
     const purchasedCourses = await CoursePurchase.find({
-      userId, // Filter by userId
+      userId,
       status: "Success",
-    })
-      .populate({
-        path: "courseId",
-        populate: [
-          { path: "creator", select: "name email photoUrl" }, // Populate creator
-          { path: "lectures" }, // Populate lectures inside courseId
-        ],
-      })
-      .exec();
+    }).populate({
+      path: "courseId",
+      populate: [
+        { path: "creator", select: "name email photoUrl" },
+        {
+          path: "sections",
+          populate: {
+            path: "lectures",
+          },
+        },
+      ],
+    });
 
-    // purchasedCourses will be an empty array [] if no courses are found
     return res.status(200).json({
       success: true,
-      purchasedCourses, // Return the array, even if empty
+      purchasedCourses,
     });
   } catch (error) {
     next(error);

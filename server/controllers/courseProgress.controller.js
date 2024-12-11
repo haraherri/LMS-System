@@ -1,6 +1,7 @@
 import { CustomError } from "../middlewares/error.js";
 import { Course } from "../models/course.model.js";
 import { CourseProgress } from "../models/courseProgress.model.js";
+import { Section } from "../models/section.model.js";
 
 export const getCourseProgress = async (req, res, next) => {
   try {
@@ -11,7 +12,14 @@ export const getCourseProgress = async (req, res, next) => {
       courseId,
     }).populate("lectureProgress.lectureId");
 
-    const courseDetails = await Course.findById(courseId).populate("lectures");
+    // Populate 'sections' and then 'lectures' within each section
+    const courseDetails = await Course.findById(courseId).populate({
+      path: "sections",
+      populate: {
+        path: "lectures",
+      },
+    });
+
     if (!courseDetails) {
       throw new CustomError("Course not found", 404);
     }
@@ -55,7 +63,7 @@ export const updateLectureProgress = async (req, res, next) => {
     }
 
     const lectureIndex = courseProgress.lectureProgress.findIndex(
-      (lecture) => lecture.lectureId == lectureId
+      (lecture) => lecture.lectureId.toString() === lectureId
     );
 
     if (lectureIndex !== -1) {
@@ -67,13 +75,26 @@ export const updateLectureProgress = async (req, res, next) => {
       });
     }
 
+    // Find the section containing the lecture
+    const section = await Section.findOne({ lectures: lectureId });
+    if (!section) {
+      throw new CustomError("Section not found for this lecture", 404);
+    }
+
+    // Count total lectures in the course
+    const course = await Course.findById(courseId).populate("sections");
+    let totalLectures = 0;
+    course.sections.forEach((sec) => (totalLectures += sec.lectures.length));
+
     const lectureProgressLength = courseProgress.lectureProgress.filter(
       (lecture) => lecture.viewed
     ).length;
 
-    const course = await Course.findById(courseId);
-    if (course.lectures.length === lectureProgressLength) {
+    // Check if all lectures are viewed
+    if (totalLectures === lectureProgressLength) {
       courseProgress.completed = true;
+    } else {
+      courseProgress.completed = false; // Mark as incomplete if not all lectures are viewed
     }
 
     await courseProgress.save();

@@ -32,12 +32,18 @@ const courseSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
-    lectures: [
+    sections: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Lecture",
+        ref: "Section",
       },
     ],
+    // lectures: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: "Lecture",
+    //   },
+    // ],
     creator: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

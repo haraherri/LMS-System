@@ -18,10 +18,16 @@ import {
   PlayCircle,
   Star,
 } from "lucide-react";
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import parse from "html-react-parser";
 import ReactPlayer from "react-player";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const CourseDetail = () => {
   const params = useParams();
@@ -31,6 +37,20 @@ const CourseDetail = () => {
   const { data, isLoading, isError } = useGetCourseDetailWithStatusQuery({
     courseId,
   });
+
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const descriptionRef = useRef(null);
+  const [isDescriptionOverflowing, setIsDescriptionOverflowing] =
+    useState(false);
+
+  useEffect(() => {
+    if (descriptionRef.current) {
+      setIsDescriptionOverflowing(
+        descriptionRef.current.scrollHeight >
+          descriptionRef.current.clientHeight
+      );
+    }
+  }, [data]);
 
   if (isLoading)
     return (
@@ -54,6 +74,13 @@ const CourseDetail = () => {
       navigate(`/course-progress/${courseId}`);
     }
   };
+
+  const firstLecture = course?.sections?.[0]?.lectures?.[0];
+  const previewLecture =
+    firstLecture ||
+    course?.sections
+      ?.flatMap((section) => section.lectures)
+      .find((lecture) => lecture.isPreviewFree);
 
   return (
     <div className="mt-20 space-y-5 pb-10">
@@ -104,9 +131,23 @@ const CourseDetail = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-base prose dark:prose-invert max-w-none leading-relaxed">
+              <div
+                className={`text-base prose dark:prose-invert max-w-none leading-relaxed ${
+                  showFullDescription ? "" : "line-clamp-5"
+                }`}
+                ref={descriptionRef}
+              >
                 {parse(course?.description || "")}
               </div>
+              {isDescriptionOverflowing && (
+                <Button
+                  variant="link"
+                  className="px-0 mt-2 text-blue-500 hover:underline"
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                >
+                  {showFullDescription ? "Show Less" : "Show More"}
+                </Button>
+              )}
             </CardContent>
           </Card>
 
@@ -117,35 +158,50 @@ const CourseDetail = () => {
                 Course Content
               </CardTitle>
               <CardDescription>
-                {course.lectures.length} lectures
+                {course?.sections?.reduce(
+                  (total, section) => total + section.lectures.length,
+                  0
+                )}{" "}
+                lectures
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {course.lectures.map((lecture, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-2 rounded-md hover:bg-gray-100/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3 text-sm">
-                    <span>
-                      {purchaseStatus === "Success" || lecture.isPreviewFree ? (
-                        <PlayCircle className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <Lock className="h-5 w-5 text-gray-500" />
-                      )}
-                    </span>
-                    <p
-                      className={
-                        purchaseStatus === "Success" || lecture.isPreviewFree
-                          ? "font-medium"
-                          : "text-gray-500"
-                      }
-                    >
-                      {lecture.lectureTitle}
-                    </p>
-                  </div>
-                </div>
-              ))}
+              <Accordion type="single" collapsible className="w-full">
+                {course?.sections?.map((section, index) => (
+                  <AccordionItem value={`section-${index}`} key={index}>
+                    <AccordionTrigger>{section.sectionTitle}</AccordionTrigger>
+                    <AccordionContent>
+                      {section.lectures.map((lecture, lectureIndex) => (
+                        <div
+                          key={lectureIndex}
+                          className="flex items-center justify-between p-2 rounded-md hover:bg-gray-100/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 text-sm">
+                            <span>
+                              {purchaseStatus === "Success" ||
+                              lecture.isPreviewFree ? (
+                                <PlayCircle className="h-5 w-5 text-green-500" />
+                              ) : (
+                                <Lock className="h-5 w-5 text-gray-500" />
+                              )}
+                            </span>
+                            <p
+                              className={
+                                purchaseStatus === "Success" ||
+                                lecture.isPreviewFree
+                                  ? "font-medium"
+                                  : "text-gray-500"
+                              }
+                            >
+                              {lecture.lectureTitle}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </CardContent>
           </Card>
         </div>
@@ -153,69 +209,72 @@ const CourseDetail = () => {
         {/* Course Preview & Purchase */}
         <div className="lg:col-span-1">
           <Card className="shadow-lg border border-gray-200 rounded-xl overflow-hidden">
+            {/* Video Container */}
             <div className="relative w-full aspect-video">
               <ReactPlayer
                 width="100%"
                 height="100%"
                 url={
                   purchaseStatus === "Success"
-                    ? course.lectures[0]?.videoUrl
-                    : course.lectures.find((lecture) => lecture.isPreviewFree)
-                        ?.videoUrl
+                    ? firstLecture?.videoUrl
+                    : previewLecture?.videoUrl
                 }
                 controls={true}
                 className="absolute top-0 left-0"
               />
             </div>
-            <CardHeader className="bg-gray-100/50 px-6 pt-6 pb-4">
-              <CardTitle className="text-lg font-bold">
-                Course Preview
-              </CardTitle>
-              <CardDescription className="text-gray-500 line-clamp-2">
-                {purchaseStatus === "Success"
-                  ? course.lectures[0]?.lectureTitle
-                  : course.lectures.find((lecture) => lecture.isPreviewFree)
-                      ?.lectureTitle}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-3xl font-semibold">
-                      ${course?.coursePrice ? course.coursePrice : "N/A"}
-                    </span>
-                    {course?.coursePrice && (
-                      <span className="text-sm text-gray-500 line-through">
-                        ${course?.coursePrice * 1.2}
-                      </span> /* Assuming a 20% discount */
+
+            {/* Card Content */}
+            <div>
+              <CardHeader className="bg-gray-100/50 px-6 pt-6 pb-4">
+                <CardTitle className="text-lg font-bold">
+                  Course Preview
+                </CardTitle>
+                <CardDescription className="text-gray-500 line-clamp-2">
+                  {purchaseStatus === "Success"
+                    ? firstLecture?.lectureTitle
+                    : previewLecture?.lectureTitle}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-3xl font-semibold">
+                        ${course?.coursePrice ? course.coursePrice : "N/A"}
+                      </span>
+                      {course?.coursePrice && (
+                        <span className="text-sm text-gray-500 line-through">
+                          ${course?.coursePrice * 1.2}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between gap-2">
+                    <Button
+                      variant="ghost"
+                      className="hover:bg-gray-200 transition-colors"
+                    >
+                      <Star className="h-4 w-4" />
+                      <span className="sr-only">Add to Wishlist</span>
+                    </Button>
+                    {purchaseStatus === "Success" ? (
+                      <Button
+                        onClick={handleContinueCourse}
+                        size="lg"
+                        className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-all duration-300 flex items-center justify-center"
+                      >
+                        <PlayCircle className="h-5 w-5 mr-2" />
+                        Continue Course
+                      </Button>
+                    ) : (
+                      <BuyCourseButton courseId={courseId} />
                     )}
                   </div>
                 </div>
-                <Separator />
-                <div className="flex items-center justify-between gap-2">
-                  <Button
-                    variant="ghost"
-                    className="hover:bg-gray-200 transition-colors"
-                  >
-                    <Star className="h-4 w-4" />
-                    <span className="sr-only">Add to Wishlist</span>
-                  </Button>
-                  {purchaseStatus === "Success" ? (
-                    <Button
-                      onClick={handleContinueCourse}
-                      size="lg"
-                      className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-all duration-300 flex items-center justify-center"
-                    >
-                      <PlayCircle className="h-5 w-5 mr-2" />
-                      Continue Course
-                    </Button>
-                  ) : (
-                    <BuyCourseButton courseId={courseId} />
-                  )}
-                </div>
-              </div>
-            </CardContent>
+              </CardContent>
+            </div>
           </Card>
         </div>
       </div>

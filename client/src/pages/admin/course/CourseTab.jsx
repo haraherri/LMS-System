@@ -197,7 +197,9 @@ const CourseTab = () => {
           <Button
             variant="outline"
             className="px-4 py-2"
-            disabled={courseByIdData?.course.lectures.length === 0}
+            disabled={courseByIdData?.course.sections.every(
+              (section) => section.lectures.length === 0
+            )}
             onClick={() =>
               publishStatusHandler(
                 courseByIdData?.course.isPublished ? "false" : "true"

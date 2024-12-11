@@ -29,7 +29,9 @@ router.route("/:courseId").get(verifyToken, getCourseById); //get a course by id
 router.route("/:courseId/lecture").post(verifyToken, createLecture); //create a new lecture
 router.route("/:courseId/lecture").get(verifyToken, getCourseLectures); // get all lectures of a course
 router.route("/:courseId/lecture/:lectureId").patch(verifyToken, editLecture); //edit a lecture
-router.route("/lecture/:lectureId").delete(verifyToken, removeLecture); //delete a lecture
+router
+  .route("/:courseId/lecture/:lectureId")
+  .delete(verifyToken, removeLecture);
 router.route("/lecture/:lectureId").get(verifyToken, getLectureById); //get a lecture by id
 router.route("/:courseId").patch(verifyToken, toggleCoursePublish); //toggle course publish status
 router.route("/:courseId").delete(verifyToken, removeCourse); //delete a course

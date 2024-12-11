@@ -31,7 +31,12 @@ export const createCourse = async (req, res, next) => {
 export const getCreatorCourses = async (req, res, next) => {
   try {
     const userId = req.id;
-    const courses = await Course.find({ creator: userId });
+    const courses = await Course.find({ creator: userId }).populate({
+      path: "sections",
+      populate: {
+        path: "lectures",
+      },
+    });
     if (!courses) {
       throw new CustomError("No courses found", 404);
     }
@@ -115,7 +120,12 @@ export const getCourseById = async (req, res, next) => {
   try {
     const { courseId } = req.params;
 
-    const course = await Course.findById(courseId);
+    const course = await Course.findById(courseId).populate({
+      path: "sections",
+      populate: {
+        path: "lectures",
+      },
+    });
     if (!course) {
       throw new CustomError("Course not found", 404);
     }
@@ -153,10 +163,15 @@ export const toggleCoursePublish = async (req, res, next) => {
 
 export const getPublishCourse = async (req, res, next) => {
   try {
-    const courses = await Course.find({ isPublished: true }).populate({
-      path: "creator",
-      select: "name photoUrl",
-    });
+    const courses = await Course.find({ isPublished: true }).populate([
+      { path: "creator", select: "name photoUrl" },
+      {
+        path: "sections",
+        populate: {
+          path: "lectures",
+        },
+      },
+    ]);
     if (!courses) {
       throw new CustomError("No courses found", 404);
     }
