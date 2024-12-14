@@ -1,10 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, ChevronRight } from "lucide-react";
-import { Link } from "react-router-dom";
-import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 
 const HeroSection = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+  const searchHandler = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim() !== "") {
+      navigate(`/course/search?query=${searchQuery}`);
+    }
+    setSearchQuery("");
+  };
   return (
     <div className="relative bg-gradient-to-br from-blue-400 via-purple-500 to-indigo-600 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 py-20 md:py-28 px-4 text-center">
       <div className="absolute inset-0 z-0 opacity-30">
@@ -31,11 +40,16 @@ const HeroSection = () => {
                 "0px 8px 32px -8px rgba(255, 255, 255, 0.25), inset 0px 4px 8px -2px rgba(255, 255, 255, 0.2), inset 0px -4px 8px -2px rgba(255, 255, 255, 0.1)",
             }}
           ></div>
-          <form className="flex flex-col md:flex-row items-center gap-4">
+          <form
+            onSubmit={searchHandler}
+            className="flex flex-col md:flex-row items-center gap-4"
+          >
             <div className="relative w-full">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
               <Input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search for your next learning adventure..."
                 className="pl-12 pr-4 py-3 w-full border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent rounded-lg text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 text-base bg-gray-100 dark:bg-gray-700/50"
               />
@@ -52,7 +66,7 @@ const HeroSection = () => {
               Not sure where to start? Explore our
             </span>
             <Link
-              to="/courses"
+              to={`/course/search?query`}
               className="text-blue-600 dark:text-blue-400 hover:underline ml-1 text-sm font-medium"
             >
               course catalog

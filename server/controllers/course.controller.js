@@ -217,3 +217,40 @@ export const removeCourse = async (req, res, next) => {
     next(error);
   }
 };
+
+export const searchCourse = async (req, res, next) => {
+  try {
+    const { query = "", categories = "", sortByPrice = "" } = req.query;
+
+    const baseQuery = {
+      isPublished: true,
+      ...(query && {
+        $or: [
+          { courseTitle: { $regex: query, $options: "i" } },
+          { subTitle: { $regex: query, $options: "i" } },
+          { category: { $regex: query, $options: "i" } },
+        ],
+      }),
+      ...(categories && {
+        category: {
+          $in: categories.split(","),
+        },
+      }),
+    };
+
+    const sortOptions = {
+      low: { coursePrice: 1 },
+      high: { coursePrice: -1 },
+      "": {},
+    };
+
+    const courses = await Course.find(baseQuery)
+      .populate("creator", "name photoUrl")
+      .sort(sortOptions[sortByPrice])
+      .lean();
+
+    return res.status(200).json({ courses });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -68,7 +68,9 @@ export const logout = async (req, res, next) => {
 export const getUserProfile = async (req, res, next) => {
   try {
     const userId = req.id;
-    const user = await User.findById(userId).select("-password");
+    const user = await User.findById(userId)
+      .select("-password")
+      .populate("enrolledCourses");
     if (!user) {
       throw new CustomError("User not found!", 404);
     }
