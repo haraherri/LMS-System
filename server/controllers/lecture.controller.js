@@ -2,7 +2,8 @@ import { CustomError } from "../middlewares/error.js";
 import { Course } from "../models/course.model.js";
 import { Lecture } from "../models/lecture.model.js";
 import { Section } from "../models/section.model.js";
-import { deleteVideoFromMinio, uploadVideoToMinio } from "../utils/minio.js";
+import { deleteVideoFromMinio } from "../utils/minio.js";
+import minioClient from "../utils/minio.js";
 
 export const createLecture = async (req, res, next) => {
   try {
@@ -74,27 +75,31 @@ export const editLecture = async (req, res, next) => {
       throw new CustomError("Lecture not found", 404);
     }
 
-    // 3. Get video URL from request body
-    const newVideoUrl = videoInfo?.videoUrl;
+    // 3. Prepare updated data
+    let updateData = {
+      ...(lectureTitle && { lectureTitle }),
+      ...(typeof isPreviewFree !== "undefined" && { isPreviewFree }),
+    };
 
-    // 4. Delete old video from MinIO ONLY if new video URL is provided
-    if (existingLecture.videoUrl && newVideoUrl) {
-      // Extract filename from existingLecture.videoUrl
-      const oldVideoFilename = existingLecture.videoUrl
-        .split("/")
-        .pop()
-        .split("?")[0]; // Consider only the part before '?'
-      await deleteVideoFromMinio(oldVideoFilename);
+    // 4. Update video information if provided
+    if (videoInfo && videoInfo.videoFilename) {
+      updateData.videoUrl = videoInfo.url;
+      updateData.videoFilename = videoInfo.videoFilename;
+      updateData.videoUrlExpiresAt = videoInfo.expires;
+
+      // Delete the old video from MinIO (if it exists and the filename is different)
+      if (
+        existingLecture.videoFilename &&
+        existingLecture.videoFilename !== videoInfo.videoFilename
+      ) {
+        await deleteVideoFromMinio(existingLecture.videoFilename);
+      }
     }
 
     // 5. Update lecture with single query
     const updatedLecture = await Lecture.findByIdAndUpdate(
       lectureId,
-      {
-        ...(lectureTitle && { lectureTitle }),
-        ...(newVideoUrl && { videoUrl: newVideoUrl }),
-        ...(typeof isPreviewFree !== "undefined" && { isPreviewFree }),
-      },
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -106,6 +111,44 @@ export const editLecture = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// Hàm hỗ trợ để lấy thông tin bài giảng và làm mới URL nếu cần
+const getLectureAndRefreshUrl = async (lectureId) => {
+  const lecture = await Lecture.findById(lectureId);
+  if (!lecture) {
+    throw new CustomError("Lecture not found", 404);
+  }
+
+  // Kiểm tra nếu URL sắp hết hạn (ví dụ: dưới 24 giờ) và tồn tại videoFilename
+  const now = new Date();
+  const twentyFourHoursFromNow = new Date(now);
+  twentyFourHoursFromNow.setHours(twentyFourHoursFromNow.getHours() + 24);
+
+  if (
+    lecture.videoFilename && // Check if videoFilename exists
+    (!lecture.videoUrl ||
+      (lecture.videoUrlExpiresAt &&
+        lecture.videoUrlExpiresAt < twentyFourHoursFromNow))
+  ) {
+    // Tạo mới presigned URL với hạn 7 ngày
+    const url = await minioClient.presignedGetObject(
+      process.env.MINIO_BUCKET_NAME,
+      lecture.videoFilename,
+      7 * 24 * 60 * 60
+    );
+
+    // Cập nhật thời gian hết hạn mới
+    const expires = new Date();
+    expires.setSeconds(expires.getSeconds() + 7 * 24 * 60 * 60);
+
+    // Cập nhật thông tin video trong database
+    lecture.videoUrl = url;
+    lecture.videoUrlExpiresAt = expires;
+    await lecture.save();
+  }
+
+  return lecture;
 };
 
 export const removeLecture = async (req, res, next) => {
@@ -150,16 +193,7 @@ export const removeLecture = async (req, res, next) => {
 export const getLectureById = async (req, res, next) => {
   try {
     const { lectureId } = req.params;
-
-    // 1. Find lecture and select needed fields
-    const lecture = await Lecture.findById(lectureId).select(
-      "lectureTitle videoUrl isPreviewFree"
-    );
-
-    if (!lecture) {
-      throw new CustomError("Lecture not found", 404);
-    }
-
+    const lecture = await getLectureAndRefreshUrl(lectureId);
     return res.status(200).json({
       success: true,
       lecture,

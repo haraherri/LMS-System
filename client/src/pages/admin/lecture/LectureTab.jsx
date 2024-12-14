@@ -32,7 +32,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
-const MEDIA_API = "http://localhost:8084/api/v1/media";
+const MEDIA_API = "http://localhost:8084/api/v1"; // Đã sửa URL
 
 const LectureTab = () => {
   const [lectureTitle, setLectureTitle] = useState("");
@@ -40,7 +40,6 @@ const LectureTab = () => {
   const [isFree, setIsFree] = useState(false);
   const [mediaProgress, setMediaProgress] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [btnDisable, setBtnDisable] = useState(true);
   const [currentVideoUrl, setCurrentVideoUrl] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
@@ -58,8 +57,9 @@ const LectureTab = () => {
       setIsFree(lecture.isPreviewFree);
       setCurrentVideoUrl(lecture.videoUrl || "");
       setUploadVideoInfo({
-        videoUrl: lecture.videoUrl,
-        publicId: lecture.publicId,
+        url: lecture.videoUrl,
+        videoFilename: lecture.videoFilename,
+        expires: lecture.videoUrlExpiresAt,
       });
     }
   }, [lecture]);
@@ -79,14 +79,12 @@ const LectureTab = () => {
   const currentProgress = useRef(0);
 
   useEffect(() => {
-    let interval; // Declare interval outside the if block
+    let interval;
     if (isUploading) {
-      // Only start the interval when isUploading is true
       interval = setInterval(() => {
-        // Check if upload is complete within the interval
         if (currentProgress.current >= 100) {
-          clearInterval(interval); // Clear interval if upload is done
-          setUploadProgress(currentProgress.current); // Set to actual progress value
+          clearInterval(interval);
+          setUploadProgress(currentProgress.current);
         } else if (currentProgress.current > uploadProgress) {
           setUploadProgress((prev) =>
             prev + 1 > currentProgress.current
@@ -98,7 +96,7 @@ const LectureTab = () => {
     }
 
     return () => clearInterval(interval);
-  }, [uploadProgress, isUploading, currentProgress.current]);
+  }, [uploadProgress, isUploading]);
 
   const fileChangeHandler = async (e) => {
     const file = e.target.files[0];
@@ -108,7 +106,7 @@ const LectureTab = () => {
       setMediaProgress(true);
       setUploadProgress(0);
       currentProgress.current = 0;
-      setIsUploading(true); // Set uploading state to true
+      setIsUploading(true);
 
       try {
         const response = await axios.post(
@@ -122,17 +120,17 @@ const LectureTab = () => {
         );
         if (response.data.success) {
           setUploadVideoInfo({
-            videoUrl: response.data.data.url,
-            publicId: response.data.data.public_id,
+            url: response.data.data.url,
+            videoFilename: response.data.data.videoFilename,
+            expires: response.data.data.expires,
           });
-          setBtnDisable(false);
           toast.success(response.data.message);
         }
       } catch (error) {
         toast.error(error?.response?.data?.error || "Failed to upload video");
       } finally {
         setMediaProgress(false);
-        setIsUploading(false); // Reset uploading state
+        setIsUploading(false);
       }
     }
   };
@@ -230,7 +228,8 @@ const LectureTab = () => {
           {currentVideoUrl && (
             <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-800 rounded">
               <p className="text-sm">
-                Current video: {currentVideoUrl.split("/").pop()}{" "}
+                {/* Hiển thị tên file video */}
+                Current video: {uploadVideoInfo?.videoFilename || "N/A"}
               </p>
               <Button
                 variant="link"
@@ -280,4 +279,5 @@ const LectureTab = () => {
     </Card>
   );
 };
+
 export default LectureTab;

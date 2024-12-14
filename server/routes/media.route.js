@@ -1,7 +1,9 @@
+// routes/upload.js
 import express from "express";
 import upload from "../utils/multer.js";
 import { uploadVideoToMinio } from "../utils/minio.js";
 import fs from "fs";
+import path from "path";
 
 const router = express.Router();
 
@@ -23,8 +25,14 @@ router
           message: "Only video files are allowed.",
         });
       }
-      // Upload video to MinIO
-      const result = await uploadVideoToMinio(req.file.path, req.file.filename);
+
+      // Generate a unique filename to avoid conflicts
+      const uniqueFilename = `file-${Date.now()}${path.extname(
+        req.file.originalname
+      )}`;
+
+      // Upload video to MinIO using the unique filename
+      const result = await uploadVideoToMinio(req.file.path, uniqueFilename);
 
       // delete temporary file after uploading
       fs.unlink(req.file.path, (err) => {
@@ -37,7 +45,9 @@ router
         success: true,
         message: "Video uploaded successfully! 🎉",
         data: {
-          url: result.url, // URL to access the video
+          url: result.url,
+          expires: result.expires,
+          videoFilename: result.videoFilename, // Include this
         },
       });
     } catch (error) {

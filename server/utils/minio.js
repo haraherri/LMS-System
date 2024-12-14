@@ -1,3 +1,4 @@
+// utils/minio.js
 import { Client } from "minio";
 import dotenv from "dotenv";
 dotenv.config();
@@ -58,13 +59,23 @@ export const uploadVideoToMinio = async (
       filePath,
       metaData
     );
+
+    // Set expiration time to 7 days (7 * 24 * 60 * 60 seconds)
+    const expirationSeconds = 7 * 24 * 60 * 60;
+
     const url = await minioClient.presignedGetObject(
       bucket,
       fileName,
-      24 * 60 * 60
-    ); // URL Temporarily valid for 1 day
+      expirationSeconds
+    );
+
+    // Calculate expiration Date
+    const expires = new Date();
+    expires.setSeconds(expires.getSeconds() + expirationSeconds);
+
     console.log("File uploaded successfully:", etag);
-    return { etag: etag.etag, url };
+
+    return { etag: etag.etag, url, videoFilename: fileName, expires };
   } catch (error) {
     console.error("Error uploading video:", error);
     throw error;

@@ -1,3 +1,4 @@
+// models/lecture.model.js
 import mongoose from "mongoose";
 
 const lectureSchema = new mongoose.Schema(
@@ -9,8 +10,11 @@ const lectureSchema = new mongoose.Schema(
     videoUrl: {
       type: String,
     },
-    publicId: {
+    videoFilename: {
       type: String,
+    },
+    videoUrlExpiresAt: {
+      type: Date,
     },
     isPreviewFree: {
       type: Boolean,
