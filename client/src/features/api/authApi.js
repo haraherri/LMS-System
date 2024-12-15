@@ -30,9 +30,13 @@ export const authApi = createApi({
           const result = await queryFulfilled;
           dispatch(userLoggedIn({ user: result.data.user }));
 
-          // Then initialize new states for new user
-          await dispatch(courseApi.util.initiate());
-          await dispatch(purchaseApi.util.initiate());
+          // Then trigger fetching data for new user
+          // Fetch purchased courses
+          dispatch(purchaseApi.endpoints.getPurchasedCourses.initiate());
+          // Fetch creator's courses if the user is a creator (You might need to add logic to check user role)
+          dispatch(courseApi.endpoints.getCreatorCourse.initiate());
+          // Fetch published courses for students
+          dispatch(courseApi.endpoints.getPublishCourse.initiate());
         } catch (error) {
           console.log(error);
         }

@@ -19,6 +19,7 @@ import EditLecture from "./pages/admin/lecture/EditLecture";
 import ProtectedRoute from "./components/ProtectedRoutes";
 import GuestRoute from "./components/GuestRoute";
 import NotFound from "./components/NotFound";
+import PurchaseProtected from "./components/PurchaseProtected";
 
 const appRouter = createBrowserRouter([
   {
@@ -68,7 +69,13 @@ const appRouter = createBrowserRouter([
       },
       {
         path: "course-progress/:courseId",
-        element: <CourseProgress />,
+        element: (
+          <ProtectedRoute>
+            <PurchaseProtected>
+              <CourseProgress />
+            </PurchaseProtected>
+          </ProtectedRoute>
+        ),
       },
       //admin routes start here
       {

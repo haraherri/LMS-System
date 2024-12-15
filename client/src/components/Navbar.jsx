@@ -51,7 +51,9 @@ const Navbar = () => {
   }, [isSuccess]);
 
   return (
-    <div className="h-16 dark:bg-[#0A0A0A] bg-white border-b dark:border-b-gray-800 border-b-gray-200 fixed top-0 left-0 right-0 duration-300 z-10">
+    <div className="h-16 bg-white dark:bg-[#0A0A0A] border-b dark:border-b-gray-800 border-b-gray-200 fixed top-0 left-0 right-0 duration-300 z-50">
+      {" "}
+      {/* Changed z-index to 50 */}
       <div className="max-w-7xl mx-auto hidden md:flex justify-between items-center gap-10 h-full">
         <div className="flex items-center gap-2">
           <School size={"30"} />
@@ -181,7 +183,18 @@ const Navbar = () => {
 export default Navbar;
 
 const MobileNavbar = () => {
-  const role = "instructor";
+  const { user } = useSelector((state) => state.auth);
+  const [logoutUser, { data, isSuccess }] = useLogoutUserMutation();
+  const navigate = useNavigate();
+  const logoutHandler = async () => {
+    await logoutUser();
+  };
+  useEffect(() => {
+    if (isSuccess) {
+      toast.success(data.message || "Logged out successfully!");
+      navigate("/login");
+    }
+  }, [isSuccess]);
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -199,17 +212,50 @@ const MobileNavbar = () => {
           <DarkMode />
         </SheetHeader>
         <Separator className="mr-2" />
-        <nav className="flex flex-col space-y-4">
-          <span>My Learning</span>
-          <span>Edit Profile</span>
-          <p>Log out</p>
+        <nav className="flex flex-col space-y-4 mt-4">
+          <Link
+            to="my-learning"
+            className="group flex items-center space-x-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <BookOpen className="h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+            <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400">
+              My Learning
+            </span>
+          </Link>
+          <Link
+            to="profile"
+            className="group flex items-center space-x-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <UserCog className="h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+            <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400">
+              Edit Profile
+            </span>
+          </Link>
+          <button
+            className="w-full text-left flex items-center space-x-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            onClick={() => {
+              logoutHandler();
+            }}
+          >
+            <LogOut className="h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+            <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400">
+              Log out
+            </span>
+          </button>
         </nav>
-        {role === "instructor" && (
-          <SheetFooter>
-            <SheetClose asChild>
-              <Button type="submit">Dashboard</Button>
-            </SheetClose>
-          </SheetFooter>
+        {user?.role === "instructor" && (
+          <>
+            <Separator className="my-4" />
+            <Link
+              to="/admin/dashboard"
+              className="group flex items-center space-x-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <LayoutDashboard className="h-5 w-5 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+              <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                Dashboard
+              </span>
+            </Link>
+          </>
         )}
       </SheetContent>
     </Sheet>

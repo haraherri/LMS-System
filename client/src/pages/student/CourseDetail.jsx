@@ -28,15 +28,18 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useSelector } from "react-redux";
 
 const CourseDetail = () => {
   const params = useParams();
   const { courseId } = params;
   const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
 
-  const { data, isLoading, isError } = useGetCourseDetailWithStatusQuery({
-    courseId,
-  });
+  const { data, isLoading, isError } = useGetCourseDetailWithStatusQuery(
+    { courseId },
+    { skip: !user }
+  );
 
   const [showFullDescription, setShowFullDescription] = useState(false);
   const descriptionRef = useRef(null);
@@ -44,7 +47,14 @@ const CourseDetail = () => {
     useState(false);
 
   useEffect(() => {
-    if (descriptionRef.current) {
+    if (!user) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    // Check if data exists before accessing descriptionRef
+    if (data && descriptionRef.current) {
       setIsDescriptionOverflowing(
         descriptionRef.current.scrollHeight >
           descriptionRef.current.clientHeight
@@ -52,13 +62,15 @@ const CourseDetail = () => {
     }
   }, [data]);
 
-  if (isLoading)
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
       </div>
     );
-  if (isError)
+  }
+
+  if (isError) {
     return (
       <div className="flex items-center justify-center h-screen">
         <h1 className="text-lg font-semibold text-red-500">
@@ -66,8 +78,11 @@ const CourseDetail = () => {
         </h1>
       </div>
     );
+  }
 
-  const { course, purchaseStatus } = data;
+  // Check if data exists before destructuring
+  const course = data?.course;
+  const purchaseStatus = data?.purchaseStatus;
 
   const handleContinueCourse = () => {
     if (purchaseStatus === "Success") {
@@ -75,12 +90,18 @@ const CourseDetail = () => {
     }
   };
 
+  // Check if course exists before accessing sections
   const firstLecture = course?.sections?.[0]?.lectures?.[0];
   const previewLecture =
     firstLecture ||
     course?.sections
       ?.flatMap((section) => section.lectures)
       .find((lecture) => lecture.isPreviewFree);
+
+  // Return null or a placeholder if data is undefined (e.g., after logout)
+  if (!data) {
+    return null; // Or return a placeholder component
+  }
 
   return (
     <div className="mt-20 space-y-5 pb-10">
