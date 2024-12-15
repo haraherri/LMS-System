@@ -1,16 +1,24 @@
-import { authApi } from "@/features/api/authApi";
 import { combineReducers } from "@reduxjs/toolkit";
-import authReducer from "@/features/authSlice";
+import { authApi } from "@/features/api/authApi";
+import authReducer, { userLoggedOut } from "@/features/authSlice";
 import { courseApi } from "@/features/api/courseApi";
 import { purchaseApi } from "@/features/api/purchaseApi";
 import { courseProgressApi } from "@/features/api/courseProgressApi";
 
-const rootReducer = combineReducers({
+const appReducer = combineReducers({
   [authApi.reducerPath]: authApi.reducer,
   [courseApi.reducerPath]: courseApi.reducer,
   [purchaseApi.reducerPath]: purchaseApi.reducer,
   [courseProgressApi.reducerPath]: courseProgressApi.reducer,
   auth: authReducer,
 });
+
+const rootReducer = (state, action) => {
+  if (action.type === userLoggedOut.type) {
+    // Reset all states to initial state when user logs out
+    return appReducer(undefined, action);
+  }
+  return appReducer(state, action);
+};
 
 export default rootReducer;

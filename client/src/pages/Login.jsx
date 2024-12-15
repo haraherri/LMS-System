@@ -25,7 +25,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const Login = () => {
@@ -57,6 +57,9 @@ const Login = () => {
   ] = useLoginUserMutation();
 
   const navigate = useNavigate();
+  const location = useLocation();
+  // Lấy đường dẫn từ state, mặc định là "/"
+  const from = location.state?.from?.pathname || "/";
 
   const changeInputHandler = (e, type) => {
     const { name, value } = e.target;
@@ -70,7 +73,11 @@ const Login = () => {
   const handleRegistration = async (type) => {
     const inputData = type === "signup" ? signupInput : loginInput;
     const action = type === "signup" ? registerUser : loginUser;
-    await action(inputData);
+    try {
+      await action(inputData).unwrap();
+    } catch (error) {
+      console.log("Error:", error); // Log lỗi ra console
+    }
   };
 
   useEffect(() => {
@@ -78,25 +85,34 @@ const Login = () => {
       toast.success(registerData.message || "Signup successfully!");
     }
     if (registerError) {
-      toast.error(registerError.data.error || "Signup failed!");
+      toast.error(
+        registerError.data?.error ||
+          registerError.error ||
+          "Signup failed! Please check your network or contact support."
+      );
     }
   }, [registerData, registerError, registerIsSuccess]);
 
   useEffect(() => {
     if (loginIsSuccess && loginData) {
       toast.success(loginData.message || "Login successfully!");
-      navigate("/");
+      // Redirect đến đường dẫn từ state hoặc "/"
+      navigate(from, { replace: true });
     }
     if (loginError) {
-      toast.error(loginError.data.error || "Login failed!");
+      toast.error(
+        loginError.data?.error ||
+          loginError.error ||
+          "Login failed! Please check your network or contact support."
+      );
     }
-  }, [loginData, loginError, loginIsSuccess]);
+  }, [loginData, loginError, loginIsSuccess, navigate, from]);
 
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat"
       style={{
-        backgroundImage: "url('/login-bg.jpg')", // Chỉ cần thêm dấu / trước tên file
+        backgroundImage: "url('/login-bg.jpg')",
       }}
     >
       <div className="absolute inset-0 bg-white/70 backdrop-blur-sm" />

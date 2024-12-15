@@ -70,10 +70,18 @@ export const getUserProfile = async (req, res, next) => {
     const userId = req.id;
     const user = await User.findById(userId)
       .select("-password")
-      .populate("enrolledCourses");
+      .populate({
+        path: "enrolledCourses",
+        populate: {
+          path: "creator",
+          select: "name photoUrl",
+        },
+      });
+
     if (!user) {
       throw new CustomError("User not found!", 404);
     }
+
     return res.status(200).json({
       success: true,
       user,
@@ -82,6 +90,7 @@ export const getUserProfile = async (req, res, next) => {
     next(error);
   }
 };
+
 export const updateProfile = async (req, res, next) => {
   try {
     const userId = req.id;

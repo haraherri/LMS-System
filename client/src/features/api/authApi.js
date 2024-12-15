@@ -47,12 +47,12 @@ export const authApi = createApi({
         try {
           await queryFulfilled;
 
-          // Reset auth state first
+          // Dispatch userLoggedOut action to reset auth state
           dispatch(userLoggedOut());
 
-          // Then reset all API states
-          dispatch(courseApi.util.resetApiState());
-          dispatch(purchaseApi.util.resetApiState());
+          // Reset all API states to clear user's cache
+          // dispatch(courseApi.util.resetApiState());
+          // dispatch(purchaseApi.util.resetApiState());
         } catch (error) {
           console.log(error);
         }

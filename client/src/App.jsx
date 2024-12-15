@@ -1,12 +1,14 @@
 import React from "react";
-import Login from "./pages/Login";
-import HeroSection from "./pages/student/HeroSection";
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import MainLayout from "./layout/MainLayout";
-import { RouterProvider } from "react-router";
+import HeroSection from "./pages/student/HeroSection";
 import Courses from "./pages/student/Courses";
 import MyLearning from "./pages/student/MyLearning";
 import Profile from "./pages/student/Profile";
+import SearchPage from "./pages/student/SearchPage";
+import CourseDetail from "./pages/student/CourseDetail";
+import CourseProgress from "./pages/student/CourseProgress";
+import Login from "./pages/Login";
 import Sidebar from "./pages/admin/Sidebar";
 import CourseTable from "./pages/admin/course/CourseTable";
 import Dashboard from "./pages/admin/Dashboard";
@@ -14,9 +16,9 @@ import AddCourse from "./pages/admin/course/AddCourse";
 import EditCourse from "./pages/admin/course/EditCourse";
 import CreateLecture from "./pages/admin/lecture/CreateLecture";
 import EditLecture from "./pages/admin/lecture/EditLecture";
-import CourseDetail from "./pages/student/CourseDetail";
-import CourseProgress from "./pages/student/CourseProgress";
-import SearchPage from "./pages/student/SearchPage";
+import ProtectedRoute from "./components/ProtectedRoutes";
+import GuestRoute from "./components/GuestRoute";
+import NotFound from "./components/NotFound";
 
 const appRouter = createBrowserRouter([
   {
@@ -34,15 +36,27 @@ const appRouter = createBrowserRouter([
       },
       {
         path: "login",
-        element: <Login />,
+        element: (
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        ),
       },
       {
         path: "my-learning",
-        element: <MyLearning />,
+        element: (
+          <ProtectedRoute>
+            <MyLearning />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "profile",
-        element: <Profile />,
+        element: (
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "course/search",
@@ -59,7 +73,11 @@ const appRouter = createBrowserRouter([
       //admin routes start here
       {
         path: "admin",
-        element: <Sidebar />,
+        element: (
+          <ProtectedRoute allowedRoles={["instructor"]}>
+            <Sidebar />
+          </ProtectedRoute>
+        ),
         children: [
           {
             path: "dashboard",
@@ -87,9 +105,14 @@ const appRouter = createBrowserRouter([
           },
         ],
       },
+      {
+        path: "*", // 404 page
+        element: <NotFound />,
+      },
     ],
   },
 ]);
+
 const App = () => {
   return (
     <main>
