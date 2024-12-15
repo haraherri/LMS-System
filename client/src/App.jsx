@@ -20,6 +20,7 @@ import ProtectedRoute from "./components/ProtectedRoutes";
 import GuestRoute from "./components/GuestRoute";
 import NotFound from "./components/NotFound";
 import PurchaseProtected from "./components/PurchaseProtected";
+import { ThemeProvider } from "./components/ThemeProvider";
 
 const appRouter = createBrowserRouter([
   {
@@ -123,7 +124,9 @@ const appRouter = createBrowserRouter([
 const App = () => {
   return (
     <main>
-      <RouterProvider router={appRouter} />
+      <ThemeProvider>
+        <RouterProvider router={appRouter} />
+      </ThemeProvider>
     </main>
   );
 };
