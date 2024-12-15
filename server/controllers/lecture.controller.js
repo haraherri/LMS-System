@@ -153,7 +153,7 @@ const getLectureAndRefreshUrl = async (lectureId) => {
 
 export const removeLecture = async (req, res, next) => {
   try {
-    const { lectureId, courseId } = req.params;
+    const { lectureId } = req.params;
 
     const lectureToDelete = await Lecture.findById(lectureId);
     if (!lectureToDelete) {
@@ -164,7 +164,6 @@ export const removeLecture = async (req, res, next) => {
     if (!section) {
       throw new CustomError("Section not found or lecture not in section", 404);
     }
-    const sectionId = section._id;
 
     section.lectures = section.lectures.filter(
       (id) => id.toString() !== lectureId
@@ -173,13 +172,10 @@ export const removeLecture = async (req, res, next) => {
 
     await Lecture.findByIdAndDelete(lectureId);
 
-    await Promise.all([
-      // Delete video from MinIO if exists
-      lectureToDelete.videoUrl &&
-        deleteVideoFromMinio(
-          lectureToDelete.videoUrl.split("/").pop().split("?")[0]
-        ),
-    ]);
+    // Delete video from MinIO if exists
+    if (lectureToDelete.videoFilename) {
+      await deleteVideoFromMinio(lectureToDelete.videoFilename);
+    }
 
     return res.status(200).json({
       success: true,

@@ -145,7 +145,7 @@ const Navbar = () => {
                     <>
                       <Separator className="bg-gray-200 dark:bg-gray-700" />
                       <Link
-                        to="/dashboard"
+                        to="/admin/dashboard"
                         onClick={() => setIsPopoverOpen(false)}
                         className="group flex items-center space-x-2 px-3 py-2 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
