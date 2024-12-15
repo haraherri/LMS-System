@@ -98,7 +98,6 @@ export const courseApi = createApi({
     }),
     removeLecture: builder.mutation({
       query: ({ lectureId, courseId }) => ({
-        // Thêm courseId vào query
         url: `/${courseId}/lecture/${lectureId}`,
         method: "DELETE",
       }),
@@ -126,18 +125,18 @@ export const courseApi = createApi({
     }),
     createSection: builder.mutation({
       query: ({ sectionTitle, courseId }) => ({
-        url: `${SECTION_API}/${courseId}`, // Sử dụng section base URL
+        url: `${SECTION_API}/${courseId}`,
         method: "POST",
         body: { sectionTitle },
       }),
-      invalidatesTags: ["Refetch_Section"], // invalidate cache của section
+      invalidatesTags: ["Refetch_Section"],
     }),
     getCourseSections: builder.query({
       query: (courseId) => ({
-        url: `${SECTION_API}/course/${courseId}`, // Sử dụng section base URL
+        url: `${SECTION_API}/course/${courseId}`,
         method: "GET",
       }),
-      providesTags: ["Refetch_Section"], // cung cấp tag để component subcribe
+      providesTags: ["Refetch_Section"], //
     }),
     updateSection: builder.mutation({
       query: ({ sectionId, sectionTitle }) => ({
@@ -145,15 +144,14 @@ export const courseApi = createApi({
         method: "PUT",
         body: { sectionTitle },
       }),
-      invalidatesTags: ["Refetch_Section", "Refetch_Lecture"], // Invalidate cả section và lecture
+      invalidatesTags: ["Refetch_Section", "Refetch_Lecture"],
     }),
-    // Thêm deleteSection
     deleteSection: builder.mutation({
       query: ({ sectionId }) => ({
         url: `${SECTION_API}/${sectionId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Refetch_Section", "Refetch_Lecture"], // Invalidate cả section và lecture
+      invalidatesTags: ["Refetch_Section", "Refetch_Lecture"],
     }),
   }),
 });

@@ -35,25 +35,32 @@ import {
 
 const Navbar = () => {
   const { user } = useSelector((state) => state.auth);
-  const [logoutUser, { data, isSuccess }] = useLogoutUserMutation();
+  const [logoutUser, { isLoading, isSuccess }] = useLogoutUserMutation();
   const navigate = useNavigate();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   const logoutHandler = async () => {
-    await logoutUser();
-  };
-
-  useEffect(() => {
-    if (isSuccess) {
-      toast.success(data.message || "Logged out successfully!");
-      navigate("/login");
+    try {
+      const result = await logoutUser();
+      if (result?.data?.success) {
+        toast.success(result.data.message);
+        navigate("/login");
+      } else {
+        toast.error("Logout failed or unexpected response.");
+      }
+    } catch (error) {
+      toast.error(
+        error.data?.error ||
+          error.message ||
+          "Logout failed! Please try again later."
+      );
+      console.error(error);
     }
-  }, [isSuccess]);
+  };
 
   return (
     <div className="h-16 bg-white dark:bg-[#0A0A0A] border-b dark:border-b-gray-800 border-b-gray-200 fixed top-0 left-0 right-0 duration-300 z-50">
       {" "}
-      {/* Changed z-index to 50 */}
       <div className="max-w-7xl mx-auto hidden md:flex justify-between items-center gap-10 h-full">
         <div className="flex items-center gap-2">
           <School size={"30"} />
@@ -184,17 +191,27 @@ export default Navbar;
 
 const MobileNavbar = () => {
   const { user } = useSelector((state) => state.auth);
-  const [logoutUser, { data, isSuccess }] = useLogoutUserMutation();
+  const [logoutUser] = useLogoutUserMutation();
   const navigate = useNavigate();
   const logoutHandler = async () => {
-    await logoutUser();
-  };
-  useEffect(() => {
-    if (isSuccess) {
-      toast.success(data.message || "Logged out successfully!");
-      navigate("/login");
+    try {
+      const result = await logoutUser();
+      if (result?.data?.success) {
+        toast.success(result.data.message || "Logged out successfully!");
+        navigate("/login");
+      } else {
+        toast.error("Logout failed or unexpected response.");
+      }
+    } catch (error) {
+      toast.error(
+        error.data?.message ||
+          error.message ||
+          "Logout failed! Please try again later."
+      );
+      console.error(error);
     }
-  }, [isSuccess]);
+  };
+
   return (
     <Sheet>
       <SheetTrigger asChild>

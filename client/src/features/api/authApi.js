@@ -3,6 +3,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { userLoggedIn, userLoggedOut } from "../authSlice";
 import { courseApi } from "./courseApi";
 import { purchaseApi } from "./purchaseApi";
+import { toast } from "sonner";
 
 export const authApi = createApi({
   reducerPath: "authApi",
@@ -23,22 +24,23 @@ export const authApi = createApi({
       }),
       async onQueryStarted(_, { queryFulfilled, dispatch }) {
         try {
-          // Reset all API states first to clear old user's cache
-          dispatch(courseApi.util.resetApiState());
-          dispatch(purchaseApi.util.resetApiState());
-
           const result = await queryFulfilled;
-          dispatch(userLoggedIn({ user: result.data.user }));
 
-          // Then trigger fetching data for new user
-          // Fetch purchased courses
-          dispatch(purchaseApi.endpoints.getPurchasedCourses.initiate());
-          // Fetch creator's courses if the user is a creator (You might need to add logic to check user role)
-          dispatch(courseApi.endpoints.getCreatorCourse.initiate());
-          // Fetch published courses for students
-          dispatch(courseApi.endpoints.getPublishCourse.initiate());
+          // Dispatch userLoggedIn after other API calls are initiated
+          await Promise.all([
+            dispatch(purchaseApi.endpoints.getPurchasedCourses.initiate()),
+            dispatch(courseApi.endpoints.getCreatorCourse.initiate()),
+            dispatch(courseApi.endpoints.getPublishCourse.initiate()),
+          ]);
+
+          dispatch(userLoggedIn({ user: result.data.user }));
         } catch (error) {
-          console.log(error);
+          console.error(error);
+          toast.error(
+            error.data?.error ||
+              error.message ||
+              "Login failed! Please try again later."
+          );
         }
       },
     }),
@@ -55,8 +57,8 @@ export const authApi = createApi({
           dispatch(userLoggedOut());
 
           // Reset all API states to clear user's cache
-          // dispatch(courseApi.util.resetApiState());
-          // dispatch(purchaseApi.util.resetApiState());
+          dispatch(courseApi.util.resetApiState());
+          dispatch(purchaseApi.util.resetApiState());
         } catch (error) {
           console.log(error);
         }
