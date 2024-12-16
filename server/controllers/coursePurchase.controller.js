@@ -218,3 +218,85 @@ export const getAllPurchasedCourse = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getRevenueAnalytics = async (req, res, next) => {
+  try {
+    const analytics = await CoursePurchase.aggregate([
+      {
+        $match: { status: "Success" }, // Filter only successful purchases
+      },
+      {
+        $lookup: {
+          from: "courses", // Join with courses collection
+          localField: "courseId",
+          foreignField: "_id",
+          as: "course",
+        },
+      },
+      {
+        $unwind: "$course", // Deconstruct the course array
+      },
+      {
+        $group: {
+          _id: "$courseId", // Group by courseId
+          courseTitle: { $first: "$course.courseTitle" }, // Get course title
+          totalSales: { $sum: 1 }, // Count purchases per course
+          totalRevenue: { $sum: "$price" }, // Sum revenue per course
+        },
+      },
+      {
+        $sort: { totalRevenue: -1 }, // Sort by total revenue descending
+      },
+      {
+        $group: {
+          _id: null, // Group all courses together
+          courses: {
+            $push: {
+              courseId: "$_id",
+              courseTitle: "$courseTitle",
+              totalSales: "$totalSales",
+              totalRevenue: "$totalRevenue",
+            },
+          }, // Push course data into an array
+          overallTotalSales: { $sum: "$totalSales" }, // Calculate overall total sales
+          overallTotalRevenue: { $sum: "$totalRevenue" }, // Calculate overall total revenue
+        },
+      },
+      {
+        $project: {
+          _id: 0, // Exclude _id field
+          courses: 1, // Include courses array
+          overallTotalSales: 1, // Include overall total sales
+          overallTotalRevenue: 1, // Include overall total revenue
+          averagePrice: {
+            $cond: {
+              if: { $gt: ["$overallTotalSales", 0] },
+              then: {
+                $divide: ["$overallTotalRevenue", "$overallTotalSales"],
+              },
+              else: 0,
+            },
+          }, // Calculate average price
+        },
+      },
+    ]);
+
+    if (!analytics || analytics.length === 0) {
+      // If no data found, return default values
+      return res.status(200).json({
+        success: true,
+        courses: [],
+        overallTotalSales: 0,
+        overallTotalRevenue: 0,
+        averagePrice: 0,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      ...analytics[0], // Return the first element of the analytics array
+    });
+  } catch (error) {
+    next(error);
+  }
+};

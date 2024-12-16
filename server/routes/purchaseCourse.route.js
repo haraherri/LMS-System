@@ -4,6 +4,7 @@ import {
   createCheckoutSession,
   getAllPurchasedCourse,
   getCourseDetailWithPurchaseStatus,
+  getRevenueAnalytics,
   stripeWebhook,
 } from "../controllers/coursePurchase.controller.js";
 
@@ -19,6 +20,8 @@ router
 router
   .route("/course/:courseId/detail-with-status")
   .get(verifyToken, getCourseDetailWithPurchaseStatus);
+router.route("/analytics/revenue").get(verifyToken, getRevenueAnalytics);
 
 router.route("/").get(verifyToken, getAllPurchasedCourse);
+
 export default router;

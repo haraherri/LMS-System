@@ -104,7 +104,7 @@ const CourseDetail = () => {
   }
 
   return (
-    <div className="mt-20 space-y-5 pb-10">
+    <div className="mt-16 space-y-5 pb-10">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-t-xl">
         <div className="max-w-7xl mx-auto py-12 px-4 md:px-8 flex flex-col gap-4">

@@ -4,6 +4,7 @@ import { Lecture } from "../models/lecture.model.js";
 import { deleteVideoFromMinio } from "../utils/minio.js";
 import { deleteMediaFromCloudinary, uploadMedia } from "../utils/cloudinary.js"; // Import Cloudinary functions
 import fs from "fs";
+import { Section } from "../models/section.model.js";
 
 export const createCourse = async (req, res, next) => {
   try {
@@ -185,25 +186,32 @@ export const removeCourse = async (req, res, next) => {
   try {
     const { courseId } = req.params;
 
-    const course = await Course.findById(courseId);
+    const course = await Course.findById(courseId).populate({
+      path: "sections",
+      populate: {
+        path: "lectures",
+      },
+    });
+
     if (!course) {
       throw new CustomError("Course not found", 404);
     }
 
-    // Delete course thumbnail if exists (using Cloudinary)
+    // Delete course thumbnail if exists
     if (course.courseThumbnail) {
       const publicId = course.courseThumbnail.split("/").pop().split(".")[0];
       await deleteMediaFromCloudinary(publicId);
     }
 
-    // Delete all lectures and their videos (using MinIO)
-    for (const lectureId of course.lectures) {
-      const lecture = await Lecture.findById(lectureId);
-      if (lecture && lecture.videoUrl) {
-        const videoFilename = lecture.videoUrl.split("/").pop().split("?")[0];
-        await deleteVideoFromMinio(videoFilename);
+    // Delete all lectures from each section and their videos
+    for (const section of course.sections) {
+      for (const lecture of section.lectures) {
+        if (lecture.videoFilename) {
+          await deleteVideoFromMinio(lecture.videoFilename);
+        }
+        await Lecture.findByIdAndDelete(lecture._id);
       }
-      await Lecture.findByIdAndDelete(lectureId);
+      await Section.findByIdAndDelete(section._id);
     }
 
     // Delete course

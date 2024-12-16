@@ -131,7 +131,6 @@ const CourseProgress = () => {
   return (
     <div className="pt-16 md:pt-24 p-4 md:p-8">
       {" "}
-      {/* Padding top added */}
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-200">

@@ -110,8 +110,13 @@ const Navbar = () => {
                       <p className="text-base font-semibold leading-none text-gray-900 dark:text-gray-100">
                         {user?.name || "User"}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {user?.email || "user@example.com"}
+                      <p
+                        className="text-sm text-gray-500 dark:text-gray-400"
+                        title={user?.email || "user@example.com"}
+                      >
+                        {user?.email && user.email.length > 20
+                          ? `${user.email.substring(0, 20)}...`
+                          : user?.email || "user@example.com"}
                       </p>
                     </div>
                   </div>

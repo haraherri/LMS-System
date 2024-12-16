@@ -1,7 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useGetPurchasedCoursesQuery } from "@/features/api/purchaseApi";
+import {
+  useGetPurchasedCoursesQuery,
+  useGetRevenueAnalyticsQuery,
+} from "@/features/api/purchaseApi";
 import { DollarSign, ShoppingCart, TrendingUp, BarChart } from "lucide-react";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Area,
   AreaChart,
@@ -11,12 +14,36 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { motion } from "framer-motion"; // Import framer-motion
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 const Dashboard = () => {
-  const { data, isLoading, isError } = useGetPurchasedCoursesQuery();
+  const { data, isLoading, isError } = useGetRevenueAnalyticsQuery();
+
+  function formatNumber(number) {
+    if (number >= 1000000) {
+      return (number / 1000000).toFixed(1) + "M";
+    } else if (number >= 1000) {
+      return (number / 1000).toFixed(1) + "K";
+    }
+    return number.toString();
+  }
+
+  const { totalSales, totalRevenue, courseData, averagePrice } = useMemo(() => {
+    const formattedTotalRevenue = formatNumber(data?.overallTotalRevenue || 0);
+    return {
+      totalSales: data?.overallTotalSales || 0,
+      totalRevenue: formattedTotalRevenue,
+      averagePrice: Number(data?.averagePrice || 0).toFixed(2),
+      courseData:
+        data?.courses.map((course) => ({
+          name: course.courseTitle,
+          sales: course.totalSales,
+          revenue: course.totalRevenue,
+        })) || [],
+    };
+  }, [data]);
 
   if (isLoading)
     return (
@@ -32,22 +59,6 @@ const Dashboard = () => {
         </p>
       </div>
     );
-
-  const purchasedCourses = data?.purchasedCourses || [];
-
-  const courseData = purchasedCourses.map((course) => ({
-    name: course.courseId.courseTitle,
-    price: course.courseId.coursePrice,
-  }));
-
-  const totalSales = purchasedCourses.length;
-  const totalRevenue = purchasedCourses.reduce(
-    (acc, course) => acc + course.courseId.coursePrice,
-    0
-  );
-
-  const averagePrice =
-    totalSales > 0 ? (totalRevenue / totalSales).toFixed(2) : 0;
 
   // Animation variants
   const cardVariants = {
@@ -225,11 +236,16 @@ const Dashboard = () => {
                     fontSize: 14,
                     fontWeight: "normal",
                   }}
-                  formatter={(value) => [`$${value}`, "Price"]}
+                  formatter={(value, name) => {
+                    if (name === "revenue") {
+                      return [`$${value}`, "Revenue"];
+                    }
+                    return [value, name];
+                  }}
                 />
                 <Area
                   type="monotone"
-                  dataKey="price"
+                  dataKey="revenue"
                   stroke="#8884d8"
                   fillOpacity={1}
                   fill="url(#gradient)"
