@@ -36,6 +36,12 @@ export const purchaseApi = createApi({
         method: "GET",
       }),
     }),
+    getPublicCourseDetail: builder.query({
+      query: ({ courseId }) => ({
+        url: `/course/${courseId}/public-detail`,
+        method: "GET",
+      }),
+    }),
   }),
 });
 
@@ -44,4 +50,5 @@ export const {
   useGetCourseDetailWithStatusQuery,
   useGetPurchasedCoursesQuery,
   useGetRevenueAnalyticsQuery,
+  useGetPublicCourseDetailQuery,
 } = purchaseApi;

@@ -300,3 +300,53 @@ export const getRevenueAnalytics = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getPublicCourseDetail = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+
+    const course = await Course.findById(courseId)
+      .populate("creator", "name photoUrl")
+      .populate({
+        path: "sections",
+        select: "sectionTitle",
+        populate: {
+          path: "lectures",
+          select: "lectureTitle isPreviewFree videoUrl", // Include videoUrl for preview lectures
+        },
+      });
+
+    if (!course) {
+      throw new CustomError("Course not found", 404);
+    }
+
+    // Filter out sensitive data, but keep videoUrl for preview lectures
+    const publicCourseData = {
+      courseTitle: course.courseTitle,
+      subTitle: course.subTitle,
+      description: course.description,
+      category: course.category,
+      courseLevel: course.courseLevel,
+      coursePrice: course.coursePrice,
+      courseThumbnail: course.courseThumbnail,
+      creator: course.creator,
+      sections: course.sections.map((section) => ({
+        sectionTitle: section.sectionTitle,
+        lectures: section.lectures.map((lecture) => ({
+          lectureTitle: lecture.lectureTitle,
+          isPreviewFree: lecture.isPreviewFree,
+          videoUrl: lecture.isPreviewFree ? lecture.videoUrl : null, // Only provide videoUrl if isPreviewFree is true
+        })),
+      })),
+      createdAt: course.createdAt,
+      enrolledStudentsCount: course.enrolledStudents.length,
+    };
+
+    return res.status(200).json({
+      success: true,
+      course: publicCourseData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -6,6 +6,7 @@ const MyLearning = () => {
   const { data, isLoading } = useLoadUserQuery();
 
   const myLearning = data?.user?.enrolledCourses || [];
+
   return (
     <div className="max-w-4xl mx-auto my-10 px-4 md:px-0 mt-20">
       <h1 className="font-bold text-2xl">MY LEARNING</h1>
@@ -16,8 +17,8 @@ const MyLearning = () => {
           <p>You are not enrolled in any courses!</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {myLearning.map((course, index) => (
-              <Course key={index} course={course} />
+            {myLearning.map((course) => (
+              <Course key={course._id} course={course} showProgress={true} />
             ))}
           </div>
         )}

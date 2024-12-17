@@ -22,8 +22,8 @@ const Courses = () => {
                 <CourseSkeleton key={index} />
               ))
             : data?.courses &&
-              data.courses.map((course, index) => (
-                <Course key={index} course={course} />
+              data.courses.map((course) => (
+                <Course key={course._id} course={course} showProgress={false} />
               ))}
         </div>
       </div>

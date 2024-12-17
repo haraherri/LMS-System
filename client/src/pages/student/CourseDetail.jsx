@@ -4,12 +4,15 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useGetCourseDetailWithStatusQuery } from "@/features/api/purchaseApi";
+import {
+  useGetCourseDetailWithStatusQuery,
+  useGetPublicCourseDetailQuery,
+} from "@/features/api/purchaseApi";
+
 import {
   BadgeCheck,
   BadgeInfo,
@@ -29,6 +32,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useSelector } from "react-redux";
+import PreviewModal from "./PreviewModal";
 
 const CourseDetail = () => {
   const params = useParams();
@@ -36,10 +40,22 @@ const CourseDetail = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
 
-  const { data, isLoading, isError } = useGetCourseDetailWithStatusQuery(
-    { courseId },
-    { skip: !user }
-  );
+  // Fetch public data for guests and users who haven't purchased
+  const {
+    data: publicCourseData,
+    isLoading: isPublicDataLoading,
+    isError: isPublicDataError,
+  } = useGetPublicCourseDetailQuery({ courseId }, { skip: !!user });
+
+  // Fetch protected data for logged-in users
+  const {
+    data: protectedData,
+    isLoading: isProtectedDataLoading,
+    isError: isProtectedDataError,
+  } = useGetCourseDetailWithStatusQuery({ courseId }, { skip: !user });
+
+  const isLoading = isPublicDataLoading || isProtectedDataLoading;
+  const isError = isPublicDataError || isProtectedDataError;
 
   const [showFullDescription, setShowFullDescription] = useState(false);
   const descriptionRef = useRef(null);
@@ -47,20 +63,13 @@ const CourseDetail = () => {
     useState(false);
 
   useEffect(() => {
-    if (!user) {
-      navigate("/login");
-    }
-  }, [user, navigate]);
-
-  useEffect(() => {
-    // Check if data exists before accessing descriptionRef
-    if (data && descriptionRef.current) {
+    if ((publicCourseData || protectedData) && descriptionRef.current) {
       setIsDescriptionOverflowing(
         descriptionRef.current.scrollHeight >
           descriptionRef.current.clientHeight
       );
     }
-  }, [data]);
+  }, [publicCourseData, protectedData]);
 
   if (isLoading) {
     return (
@@ -80,9 +89,14 @@ const CourseDetail = () => {
     );
   }
 
-  // Check if data exists before destructuring
-  const course = data?.course;
-  const purchaseStatus = data?.purchaseStatus;
+  // Determine which data to use based on user login status and purchase status
+  let courseDataToUse;
+  if (user && protectedData) {
+    courseDataToUse = protectedData.course;
+  } else if (publicCourseData) {
+    courseDataToUse = publicCourseData.course;
+  }
+  const purchaseStatus = protectedData?.purchaseStatus;
 
   const handleContinueCourse = () => {
     if (purchaseStatus === "Success") {
@@ -90,18 +104,18 @@ const CourseDetail = () => {
     }
   };
 
-  // Check if course exists before accessing sections
-  const firstLecture = course?.sections?.[0]?.lectures?.[0];
-  const previewLecture =
-    firstLecture ||
-    course?.sections
-      ?.flatMap((section) => section.lectures)
-      .find((lecture) => lecture.isPreviewFree);
+  const enrolledCount =
+    user && protectedData
+      ? protectedData.course?.enrolledStudents?.length
+      : courseDataToUse?.enrolledStudentsCount || 0;
 
-  // Return null or a placeholder if data is undefined (e.g., after logout)
-  if (!data) {
-    return null; // Or return a placeholder component
-  }
+  // Preview logic (adjusted for public/protected data)
+  const firstLecture = courseDataToUse?.sections?.[0]?.lectures?.[0];
+  const previewLecture = firstLecture?.isPreviewFree
+    ? firstLecture
+    : courseDataToUse?.sections
+        ?.flatMap((section) => section.lectures)
+        .find((lecture) => lecture.isPreviewFree);
 
   return (
     <div className="mt-16 space-y-5 pb-10">
@@ -109,17 +123,17 @@ const CourseDetail = () => {
       <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-t-xl">
         <div className="max-w-7xl mx-auto py-12 px-4 md:px-8 flex flex-col gap-4">
           <h1 className="font-bold text-3xl md:text-5xl tracking-tight">
-            {course?.courseTitle}
+            {courseDataToUse?.courseTitle}
           </h1>
           <p className="text-lg md:text-xl text-indigo-100">
-            {course?.subTitle}
+            {courseDataToUse?.subTitle}
           </p>
           <div className="flex items-center gap-4 mt-4 text-sm md:text-base">
             <p className="flex items-center gap-2">
               <BadgeCheck className="h-5 w-5 text-green-300" />
               Created By{" "}
               <span className="font-semibold text-white">
-                {course?.creator?.name}
+                {courseDataToUse?.creator?.name}
               </span>
             </p>
             <Separator orientation="vertical" className="h-5 bg-white/50" />
@@ -127,13 +141,15 @@ const CourseDetail = () => {
               <BadgeInfo className="h-5 w-5 text-blue-300" />
               Last updated{" "}
               <span className="font-semibold text-white">
-                {course?.createdAt ? course.createdAt.split("T")[0] : "N/A"}
+                {courseDataToUse?.createdAt
+                  ? courseDataToUse.createdAt.split("T")[0]
+                  : "N/A"}
               </span>
             </p>
             <Separator orientation="vertical" className="h-5 bg-white/50" />
             <p className="flex items-center gap-2">
               <span className="font-semibold text-white">
-                {course?.enrolledStudents.length}
+                {enrolledCount} {/* Display enrolledCount */}
               </span>{" "}
               Students
             </p>
@@ -158,7 +174,7 @@ const CourseDetail = () => {
                 }`}
                 ref={descriptionRef}
               >
-                {parse(course?.description || "")}
+                {parse(courseDataToUse?.description || "")}
               </div>
               {isDescriptionOverflowing && (
                 <Button
@@ -179,7 +195,7 @@ const CourseDetail = () => {
                 Course Content
               </CardTitle>
               <CardDescription>
-                {course?.sections?.reduce(
+                {courseDataToUse?.sections?.reduce(
                   (total, section) => total + section.lectures.length,
                   0
                 )}{" "}
@@ -188,36 +204,18 @@ const CourseDetail = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <Accordion type="single" collapsible className="w-full">
-                {course?.sections?.map((section, index) => (
+                {courseDataToUse?.sections?.map((section, index) => (
                   <AccordionItem value={`section-${index}`} key={index}>
                     <AccordionTrigger>{section.sectionTitle}</AccordionTrigger>
                     <AccordionContent>
                       {section.lectures.map((lecture, lectureIndex) => (
-                        <div
+                        <PreviewModal
                           key={lectureIndex}
-                          className="flex items-center justify-between p-2 rounded-md hover:bg-gray-100/50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 text-sm">
-                            <span>
-                              {purchaseStatus === "Success" ||
-                              lecture.isPreviewFree ? (
-                                <PlayCircle className="h-5 w-5 text-green-500" />
-                              ) : (
-                                <Lock className="h-5 w-5 text-gray-500" />
-                              )}
-                            </span>
-                            <p
-                              className={
-                                purchaseStatus === "Success" ||
-                                lecture.isPreviewFree
-                                  ? "font-medium"
-                                  : "text-gray-500"
-                              }
-                            >
-                              {lecture.lectureTitle}
-                            </p>
-                          </div>
-                        </div>
+                          lecture={lecture}
+                          isPreviewAvailable={
+                            user ? true : lecture.isPreviewFree
+                          }
+                        />
                       ))}
                     </AccordionContent>
                   </AccordionItem>
@@ -235,13 +233,22 @@ const CourseDetail = () => {
               <ReactPlayer
                 width="100%"
                 height="100%"
-                url={
-                  purchaseStatus === "Success"
-                    ? firstLecture?.videoUrl
-                    : previewLecture?.videoUrl
-                }
+                url={previewLecture?.videoUrl ? previewLecture.videoUrl : ""}
                 controls={true}
+                config={{
+                  file: {
+                    attributes: {
+                      controlsList: "nodownload",
+                    },
+                  },
+                }}
+                onContextMenu={(e) => e.preventDefault()}
                 className="absolute top-0 left-0"
+                playing={
+                  user
+                    ? purchaseStatus === "Success"
+                    : previewLecture?.isPreviewFree
+                }
               />
             </div>
 
@@ -252,9 +259,7 @@ const CourseDetail = () => {
                   Course Preview
                 </CardTitle>
                 <CardDescription className="text-gray-500 line-clamp-2">
-                  {purchaseStatus === "Success"
-                    ? firstLecture?.lectureTitle
-                    : previewLecture?.lectureTitle}
+                  {previewLecture?.lectureTitle}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
@@ -262,11 +267,14 @@ const CourseDetail = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-3xl font-semibold">
-                        ${course?.coursePrice ? course.coursePrice : "N/A"}
+                        $
+                        {courseDataToUse?.coursePrice
+                          ? courseDataToUse.coursePrice
+                          : "N/A"}
                       </span>
-                      {course?.coursePrice && (
+                      {courseDataToUse?.coursePrice && (
                         <span className="text-sm text-gray-500 line-through">
-                          ${course?.coursePrice * 1.2}
+                          ${courseDataToUse.coursePrice * 1.2}
                         </span>
                       )}
                     </div>
