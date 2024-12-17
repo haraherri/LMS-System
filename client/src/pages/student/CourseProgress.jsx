@@ -123,6 +123,11 @@ const CourseProgress = () => {
     setShowFullDescription(!showFullDescription);
   };
 
+  const calculateCompletedLectures = (section) => {
+    return section.lectures.filter((lecture) => isLectureCompleted(lecture._id))
+      .length;
+  };
+
   // Sử dụng độ dài ký tự để xác định việc hiển thị nút
   const descriptionCharacterLimit = 200; // Giới hạn ký tự hiển thị ban đầu
   const shouldShowMoreButton =
@@ -248,12 +253,14 @@ const CourseProgress = () => {
                         onClick={() => setCurrentSection(section)}
                         className="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between w-full">
                           <span className="font-medium text-gray-700 dark:text-gray-300 mr-2">
                             Section {index + 1}: {section.sectionTitle}
                           </span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto">
-                            {section.lectures.length} Lectures
+                          {/* Hiển thị số lecture đã hoàn thành / tổng số lecture */}
+                          <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto flex-shrink-0">
+                            {calculateCompletedLectures(section)}/
+                            {section.lectures.length}
                           </span>
                         </div>
                       </AccordionTrigger>

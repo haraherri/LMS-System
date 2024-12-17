@@ -16,7 +16,7 @@ import {
 } from "@/features/api/courseApi";
 
 import { Loader2, Pencil, PlusCircle, Trash, FileVideo } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -110,51 +110,58 @@ const CreateLecture = () => {
     await deleteSection({ sectionId }).unwrap();
   };
 
+  const isInitialRender = useRef(true);
+
+  useEffect(() => {
+    // Bỏ qua lần render đầu tiên
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      return;
+    }
+    refetchSections();
+  }, [isDeleteSuccess, isUpdateSuccess, isSectionSuccess]);
+
+  // useEffect cho createLecture
   useEffect(() => {
     if (isSuccess) {
       setLectureTitle("");
-      refetchSections();
       toast.success("Congrats! Lecture created successfully");
     }
     if (error) {
       toast.error(error?.data?.message || "Failed to create lecture");
     }
+  }, [isSuccess, error]);
+
+  // useEffect cho createSection
+  useEffect(() => {
     if (isSectionSuccess) {
       setSectionTitle("");
-      refetchSections();
       toast.success("Congrats! Section created successfully");
     }
     if (sectionError) {
       toast.error(sectionError?.data?.message || "Failed to create section");
     }
+  }, [isSectionSuccess, sectionError]);
+
+  // useEffect cho deleteSection
+  useEffect(() => {
     if (isDeleteSuccess) {
-      refetchSections();
       toast.success("Section deleted successfully");
     }
-
     if (isDeleteError) {
       toast.error("Failed to delete section");
     }
+  }, [isDeleteSuccess, isDeleteError]);
 
+  // useEffect cho updateSection
+  useEffect(() => {
     if (isUpdateSuccess) {
-      refetchSections();
       toast.success("Section updated successfully");
     }
-
     if (isUpdateError) {
       toast.error("Failed to update section");
     }
-  }, [
-    isSuccess,
-    error,
-    isSectionSuccess,
-    sectionError,
-    refetchSections,
-    isDeleteSuccess,
-    isDeleteError,
-    isUpdateSuccess,
-    isUpdateError,
-  ]);
+  }, [isUpdateSuccess, isUpdateError]);
 
   // Hàm xử lý khi một AccordionItem được mở hoặc đóng
   const handleSectionToggle = (sectionId, isOpen) => {

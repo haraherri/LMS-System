@@ -58,7 +58,6 @@ const Login = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  // Lấy đường dẫn từ state, mặc định là "/"
   const from = location.state?.from?.pathname || "/";
 
   const changeInputHandler = (e, type) => {
@@ -76,7 +75,7 @@ const Login = () => {
     try {
       await action(inputData).unwrap();
     } catch (error) {
-      console.log("Error:", error); // Log lỗi ra console
+      console.log("Error:", error);
     }
   };
 
@@ -96,7 +95,6 @@ const Login = () => {
   useEffect(() => {
     if (loginIsSuccess && loginData) {
       toast.success(loginData.message || "Login successfully!");
-      // Redirect đến đường dẫn từ state hoặc "/"
       navigate(from, { replace: true });
     }
     if (loginError) {

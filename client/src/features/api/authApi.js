@@ -36,11 +36,11 @@ export const authApi = createApi({
           dispatch(userLoggedIn({ user: result.data.user }));
         } catch (error) {
           console.error(error);
-          toast.error(
-            error.data?.error ||
-              error.message ||
-              "Login failed! Please try again later."
-          );
+          // toast.error(
+          //   error.data?.error ||
+          //     error.message ||
+          //     "Login failed! Please try again later."
+          // );
         }
       },
     }),
