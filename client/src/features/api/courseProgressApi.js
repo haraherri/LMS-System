@@ -4,6 +4,7 @@ const COURSE_PROGRESS_API = "http://localhost:8084/api/v1/progress";
 
 export const courseProgressApi = createApi({
   reducerPath: "courseProgressApi",
+  tagTypes: ["Progress"],
   baseQuery: fetchBaseQuery({
     baseUrl: COURSE_PROGRESS_API,
     credentials: "include",
@@ -46,7 +47,6 @@ export const courseProgressApi = createApi({
       ],
     }),
   }),
-  tagTypes: ["Progress"],
 });
 
 export const {

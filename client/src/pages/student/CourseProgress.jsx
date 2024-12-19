@@ -39,13 +39,21 @@ const CourseProgress = () => {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const params = useParams();
   const { courseId } = params;
-  const { data, isLoading, isError, refetch } =
-    useGetCourseProgressQuery(courseId);
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch: refetchCourseProgress,
+  } = useGetCourseProgressQuery(courseId);
 
   const [updateLectureProgress] = useUpdateLectureProgressMutation();
   const [completeCourse] = useMarkAsCompletedMutation();
   const [inCompleteCourse] = useMarkAsInCompletedMutation();
   const playerRef = useRef(null);
+
+  useEffect(() => {
+    refetchCourseProgress();
+  }, [courseId, refetchCourseProgress]);
 
   useEffect(() => {
     if (data && data.data.courseDetails.sections.length > 0) {
@@ -58,13 +66,15 @@ const CourseProgress = () => {
     }
   }, [data, currentSection, currentLecture]);
 
-  if (isLoading)
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <CircleEllipsis className="w-12 h-12 animate-spin text-gray-600" />
       </div>
     );
-  if (isError)
+  }
+
+  if (isError) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p className="text-lg text-red-500">
@@ -72,14 +82,21 @@ const CourseProgress = () => {
         </p>
       </div>
     );
+  }
+
+  if (!data) return null;
 
   const { courseDetails, progress, completed } = data.data;
+
   const { courseTitle, subTitle, description, category, creator } =
     courseDetails;
 
   const isLectureCompleted = (lectureId) => {
     return progress?.some(
-      (lecture) => lecture.lectureId._id === lectureId && lecture.viewed
+      (lecture) =>
+        lecture.lectureId &&
+        lecture.lectureId._id === lectureId &&
+        lecture.viewed
     );
   };
 
@@ -90,13 +107,13 @@ const CourseProgress = () => {
 
   const handleUpdateLectureProgress = async (lectureId) => {
     await updateLectureProgress({ courseId, lectureId });
-    refetch();
+    refetchCourseProgress();
   };
 
   const handleMarkAsCompleted = async () => {
     try {
       const result = await completeCourse(courseId).unwrap();
-      await refetch();
+      await refetchCourseProgress();
       toast.success(result.message || "Course marked as completed");
     } catch (error) {
       toast.error(error?.data?.error || "Failed to mark as completed");
@@ -106,7 +123,7 @@ const CourseProgress = () => {
   const handleMarkAsInCompleted = async () => {
     try {
       const result = await inCompleteCourse(courseId).unwrap();
-      await refetch();
+      await refetchCourseProgress(); // Đổi tên biến refetch
       toast.success(result.message || "Course marked as incompleted");
     } catch (error) {
       toast.error(error?.data?.error || "Failed to mark as incompleted");
@@ -124,8 +141,10 @@ const CourseProgress = () => {
   };
 
   const calculateCompletedLectures = (section) => {
-    return section.lectures.filter((lecture) => isLectureCompleted(lecture._id))
-      .length;
+    const completedLectures = section.lectures.filter((lecture) =>
+      progress.some((p) => p.lectureId?._id === lecture._id && p.viewed)
+    );
+    return completedLectures.length;
   };
 
   // Sử dụng độ dài ký tự để xác định việc hiển thị nút
@@ -172,6 +191,7 @@ const CourseProgress = () => {
                       },
                     },
                   }}
+                  onContextMenu={(e) => e.preventDefault()}
                 />
               </div>
               <CardHeader>

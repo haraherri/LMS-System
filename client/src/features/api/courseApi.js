@@ -94,7 +94,10 @@ export const courseApi = createApi({
         method: "PATCH",
         body: { lectureTitle, videoInfo, isPreviewFree },
       }),
-      invalidatesTags: ["Refetch_Lecture"],
+      invalidatesTags: (result, error, { courseId }) => [
+        "Refetch_Lecture",
+        { type: "Progress", id: courseId },
+      ],
     }),
     removeLecture: builder.mutation({
       query: ({ lectureId, courseId }) => ({

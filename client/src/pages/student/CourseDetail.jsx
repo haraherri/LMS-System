@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/accordion";
 import { useSelector } from "react-redux";
 import PreviewModal from "./PreviewModal";
+import CoursePreviewDialog from "./CoursePreviewDialog";
 
 const CourseDetail = () => {
   const params = useParams();
@@ -47,7 +48,6 @@ const CourseDetail = () => {
     isError: isPublicDataError,
   } = useGetPublicCourseDetailQuery({ courseId }, { skip: !!user });
 
-  // Fetch protected data for logged-in users
   const {
     data: protectedData,
     isLoading: isProtectedDataLoading,
@@ -57,7 +57,9 @@ const CourseDetail = () => {
   const isLoading = isPublicDataLoading || isProtectedDataLoading;
   const isError = isPublicDataError || isProtectedDataError;
 
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
+
   const descriptionRef = useRef(null);
   const [isDescriptionOverflowing, setIsDescriptionOverflowing] =
     useState(false);
@@ -104,18 +106,17 @@ const CourseDetail = () => {
     }
   };
 
+  const handleOpenPreviewDialog = () => {
+    setIsPreviewDialogOpen(true);
+  };
+
+  const handleClosePreviewDialog = () => {
+    setIsPreviewDialogOpen(false);
+  };
   const enrolledCount =
     user && protectedData
       ? protectedData.course?.enrolledStudents?.length
       : courseDataToUse?.enrolledStudentsCount || 0;
-
-  // Preview logic (adjusted for public/protected data)
-  const firstLecture = courseDataToUse?.sections?.[0]?.lectures?.[0];
-  const previewLecture = firstLecture?.isPreviewFree
-    ? firstLecture
-    : courseDataToUse?.sections
-        ?.flatMap((section) => section.lectures)
-        .find((lecture) => lecture.isPreviewFree);
 
   return (
     <div className="mt-16 space-y-5 pb-10">
@@ -228,38 +229,30 @@ const CourseDetail = () => {
         {/* Course Preview & Purchase */}
         <div className="lg:col-span-1">
           <Card className="shadow-lg border border-gray-200 rounded-xl overflow-hidden">
-            {/* Video Container */}
-            <div className="relative w-full aspect-video">
-              <ReactPlayer
-                width="100%"
-                height="100%"
-                url={previewLecture?.videoUrl ? previewLecture.videoUrl : ""}
-                controls={true}
-                config={{
-                  file: {
-                    attributes: {
-                      controlsList: "nodownload",
-                    },
-                  },
-                }}
-                onContextMenu={(e) => e.preventDefault()}
-                className="absolute top-0 left-0"
-                playing={
-                  user
-                    ? purchaseStatus === "Success"
-                    : previewLecture?.isPreviewFree
-                }
+            {/* Thumbnail Container */}
+            <div
+              className="relative w-full aspect-video cursor-pointer"
+              onClick={handleOpenPreviewDialog}
+            >
+              <img
+                src={courseDataToUse?.courseThumbnail}
+                alt="course thumbnail"
+                className="w-full h-full object-cover"
               />
+              {/* Overlay with play button */}
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <PlayCircle className="h-16 w-16 text-white opacity-80 hover:opacity-100 transition-opacity cursor-pointer" />
+              </div>
             </div>
 
             {/* Card Content */}
             <div>
               <CardHeader className="bg-gray-100/50 px-6 pt-6 pb-4">
                 <CardTitle className="text-lg font-bold">
-                  Course Preview
+                  Preview & Purchase
                 </CardTitle>
                 <CardDescription className="text-gray-500 line-clamp-2">
-                  {previewLecture?.lectureTitle}
+                  Click the image above to preview this course
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6">
@@ -272,9 +265,10 @@ const CourseDetail = () => {
                           ? courseDataToUse.coursePrice
                           : "N/A"}
                       </span>
-                      {courseDataToUse?.coursePrice && (
+                      {/* Display crossed-out price only if greater than 0 */}
+                      {courseDataToUse?.coursePrice > 0 && (
                         <span className="text-sm text-gray-500 line-through">
-                          ${courseDataToUse.coursePrice * 1.2}
+                          ${(courseDataToUse.coursePrice * 1.2).toFixed(2)}
                         </span>
                       )}
                     </div>
@@ -305,6 +299,13 @@ const CourseDetail = () => {
               </CardContent>
             </div>
           </Card>
+          <CoursePreviewDialog
+            isOpen={isPreviewDialogOpen}
+            onClose={handleClosePreviewDialog}
+            lectures={courseDataToUse?.sections
+              .flatMap((section) => section.lectures)
+              .filter((lecture) => lecture.isPreviewFree)}
+          />
         </div>
       </div>
     </div>

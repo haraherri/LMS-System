@@ -5,6 +5,9 @@ import { deleteVideoFromMinio } from "../utils/minio.js";
 import { deleteMediaFromCloudinary, uploadMedia } from "../utils/cloudinary.js"; // Import Cloudinary functions
 import fs from "fs";
 import { Section } from "../models/section.model.js";
+import { CourseProgress } from "../models/courseProgress.model.js";
+import { CoursePurchase } from "../models/coursePurchase.model.js";
+import { User } from "../models/user.model.js";
 
 export const createCourse = async (req, res, next) => {
   try {
@@ -197,13 +200,13 @@ export const removeCourse = async (req, res, next) => {
       throw new CustomError("Course not found", 404);
     }
 
-    // Delete course thumbnail if exists
+    // 1. Delete course thumbnail if exists
     if (course.courseThumbnail) {
       const publicId = course.courseThumbnail.split("/").pop().split(".")[0];
       await deleteMediaFromCloudinary(publicId);
     }
 
-    // Delete all lectures from each section and their videos
+    // 2. Delete all lectures from each section and their videos
     for (const section of course.sections) {
       for (const lecture of section.lectures) {
         if (lecture.videoFilename) {
@@ -214,7 +217,19 @@ export const removeCourse = async (req, res, next) => {
       await Section.findByIdAndDelete(section._id);
     }
 
-    // Delete course
+    // 3. Delete CourseProgress documents
+    await CourseProgress.deleteMany({ courseId: courseId });
+
+    // 4. Delete CoursePurchase documents
+    await CoursePurchase.deleteMany({ courseId: courseId });
+
+    // 5. Remove courseId from enrolledCourses of all users
+    await User.updateMany(
+      { enrolledCourses: courseId },
+      { $pull: { enrolledCourses: courseId } }
+    );
+
+    // 6. Delete course
     await Course.findByIdAndDelete(courseId);
 
     return res.status(200).json({

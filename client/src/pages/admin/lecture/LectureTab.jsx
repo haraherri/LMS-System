@@ -26,13 +26,19 @@ import {
   useGetLectureByIdQuery,
   useRemoveLectureMutation,
 } from "@/features/api/courseApi";
+import {
+  purchaseApi,
+  useGetCourseDetailWithStatusQuery,
+  useGetPublicCourseDetailQuery,
+} from "@/features/api/purchaseApi";
 import axios from "axios";
 import { Loader2 } from "lucide-react";
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useDispatch, useSelector } from "react-redux";
 
-const MEDIA_API = "http://localhost:8084/api/v1"; // Đã sửa URL
+const MEDIA_API = "http://localhost:8084/api/v1";
 
 const LectureTab = () => {
   const [lectureTitle, setLectureTitle] = useState("");
@@ -42,14 +48,29 @@ const LectureTab = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentVideoUrl, setCurrentVideoUrl] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [hasVideoChanged, setHasVideoChanged] = useState(false);
 
   const navigate = useNavigate();
   const params = useParams();
   const { courseId, lectureId } = params;
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
 
   const { data: lectureData, refetch: refetchLecture } =
     useGetLectureByIdQuery(lectureId);
   const lecture = lectureData?.lecture;
+
+  const { refetch: refetchLectureById } = useGetLectureByIdQuery(lectureId);
+
+  const {
+    refetch: refetchCourseDetailWithStatus,
+    isUninitialized: isCourseDetailWithStatusUninitialized,
+  } = useGetCourseDetailWithStatusQuery({ courseId }, { skip: !user });
+
+  const {
+    refetch: refetchPublicCourseDetail,
+    isUninitialized: isPublicCourseDetailUninitialized,
+  } = useGetPublicCourseDetailQuery({ courseId }, { skip: !!user });
 
   useEffect(() => {
     if (lecture) {
@@ -61,6 +82,7 @@ const LectureTab = () => {
         videoFilename: lecture.videoFilename,
         expires: lecture.videoUrlExpiresAt,
       });
+      setHasVideoChanged(false);
     }
   }, [lecture]);
 
@@ -96,7 +118,7 @@ const LectureTab = () => {
     }
 
     return () => clearInterval(interval);
-  }, [uploadProgress, isUploading]);
+  }, [isUploading]);
 
   const fileChangeHandler = async (e) => {
     const file = e.target.files[0];
@@ -107,6 +129,7 @@ const LectureTab = () => {
       setUploadProgress(0);
       currentProgress.current = 0;
       setIsUploading(true);
+      setHasVideoChanged(true);
 
       try {
         const response = await axios.post(
@@ -138,7 +161,7 @@ const LectureTab = () => {
   const editLectureHandler = async () => {
     await editLecture({
       lectureTitle,
-      videoInfo: uploadVideoInfo,
+      videoInfo: hasVideoChanged ? uploadVideoInfo : undefined,
       isPreviewFree: isFree,
       courseId,
       lectureId,
@@ -151,20 +174,74 @@ const LectureTab = () => {
 
   useEffect(() => {
     if (isSuccess) {
-      refetchLecture();
+      refetchLectureById();
+
+      if (user?.role === "instructor") {
+        if (!isCourseDetailWithStatusUninitialized) {
+          refetchCourseDetailWithStatus();
+        }
+      } else {
+        if (!isPublicCourseDetailUninitialized) {
+          refetchPublicCourseDetail();
+        }
+      }
+
+      dispatch(
+        purchaseApi.util.invalidateTags(["CourseStatus", "Refetch_Lecture"])
+      );
       toast.success(data?.message || "Lecture updated successfully");
     }
     if (error) {
       toast.error(error?.data?.error || "Failed to update lecture");
     }
-  }, [isSuccess, error]);
+  }, [
+    isSuccess,
+    error,
+    dispatch,
+    refetchLectureById,
+    refetchCourseDetailWithStatus,
+    isCourseDetailWithStatusUninitialized,
+    refetchPublicCourseDetail,
+    isPublicCourseDetailUninitialized,
+    data?.message,
+    user?.role,
+  ]);
 
   useEffect(() => {
     if (removeIsSuccess) {
+      if (user?.role === "instructor") {
+        if (!isCourseDetailWithStatusUninitialized) {
+          refetchCourseDetailWithStatus();
+        }
+      } else {
+        if (!isPublicCourseDetailUninitialized) {
+          refetchPublicCourseDetail();
+        }
+      }
+
+      dispatch(
+        purchaseApi.util.invalidateTags([
+          "CourseStatus",
+          "Refetch_Lecture",
+          "Refetch_Section",
+        ])
+      );
+
       toast.success(removeData?.message || "Lecture removed successfully");
       navigate(`/admin/course/${courseId}/lecture`);
     }
-  }, [removeIsSuccess, courseId, navigate]);
+  }, [
+    removeIsSuccess,
+    courseId,
+    navigate,
+    isCourseDetailWithStatusUninitialized,
+    refetchCourseDetailWithStatus,
+    isPublicCourseDetailUninitialized,
+    refetchPublicCourseDetail,
+    dispatch,
+    removeData?.message,
+    user?.role,
+  ]);
 
   return (
     <Card>

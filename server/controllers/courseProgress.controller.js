@@ -7,10 +7,6 @@ export const getCourseProgress = async (req, res, next) => {
   try {
     const { courseId } = req.params;
     const userId = req.id;
-    const courseProgress = await CourseProgress.findOne({
-      userId,
-      courseId,
-    }).populate("lectureProgress.lectureId");
 
     // Populate 'sections' and then 'lectures' within each section
     const courseDetails = await Course.findById(courseId).populate({
@@ -24,20 +20,38 @@ export const getCourseProgress = async (req, res, next) => {
       throw new CustomError("Course not found", 404);
     }
 
+    const courseProgress = await CourseProgress.findOne({
+      userId,
+      courseId,
+    }).populate("lectureProgress.lectureId");
+
     if (!courseProgress) {
       return res.status(200).json({
         data: {
           courseDetails,
-          progress: null,
+          progress: [],
           completed: false,
         },
       });
     }
 
+    const validLectureIds = courseDetails.sections.flatMap((section) =>
+      section.lectures.map((lecture) => lecture._id.toString())
+    );
+
+    const filteredLectureProgress = courseProgress.lectureProgress.filter(
+      (lectureProgress) => {
+        return (
+          lectureProgress.lectureId &&
+          validLectureIds.includes(lectureProgress.lectureId._id.toString())
+        );
+      }
+    );
+
     return res.status(200).json({
       data: {
         courseDetails,
-        progress: courseProgress.lectureProgress,
+        progress: filteredLectureProgress,
         completed: courseProgress.completed,
       },
     });
